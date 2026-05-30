@@ -66,7 +66,7 @@ public partial class BindingTests
         var label = new Label { Text = "UI" };
 
         // Act
-        using var binding = vm.BindText(label, () => vm.Name, val => vm.Name = val);
+        using var binding = vm.BindTextTo(label, () => vm.Name, val => vm.Name = val);
 
         // Simulate UI change
         label.Text = "ChangedInUI";
@@ -83,7 +83,7 @@ public partial class BindingTests
         var button = new Button();
 
         // Act
-        using var binding = vm.BindCommand(vm.SaveCommand, button);
+        using var binding = vm.BindCommandTo(vm.SaveCommand, button);
 
         // Simulate Button Accept/Click
         button.InvokeCommand(Command.Accept);

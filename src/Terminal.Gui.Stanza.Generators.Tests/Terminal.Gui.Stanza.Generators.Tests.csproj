@@ -7,14 +7,21 @@
     <TargetFramework>net11.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
+   <ItemGroup>
     <PackageReference Include="TUnit" />
     <PackageReference Include="Verify" />
     <PackageReference Include="Verify.SourceGenerators" />
+    <PackageReference Include="Verify.TUnit" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
+
 
   <ItemGroup>
     <ProjectReference Include="..\Terminal.Gui.Stanza.Generators\Terminal.Gui.Stanza.Generators.csproj" />
+    <ProjectReference Include="..\Terminal.Gui.Stanza\Terminal.Gui.Stanza.csproj" />
   </ItemGroup>
+
 
 </Project>

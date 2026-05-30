@@ -8,9 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Terminal.Gui.Stanza\Typical.Generators.csproj" />
     <ProjectReference Include="..\Terminal.Gui.Stanza\Terminal.Gui.Stanza.csproj" />
+    <ProjectReference Include="..\Terminal.Gui.Stanza.Generators\Terminal.Gui.Stanza.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="TUnit" />

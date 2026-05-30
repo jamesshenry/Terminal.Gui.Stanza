@@ -8,4 +8,9 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
+
+    <ItemGroup>
+    <ProjectReference Include="..\Terminal.Gui.Stanza.Abstractions\Terminal.Gui.Stanza.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>

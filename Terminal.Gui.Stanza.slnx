@@ -1,9 +1,4 @@
 <Solution>
-  <!-- <Project Path="src/Terminal.Gui.Stanza.Abstractions/Typical.Generators.Attributes.csproj" />
-  <Project Path="src/Terminal.Gui.Stanza.Generators.Tests/Terminal.Gui.Stanza.Generators.Tests.csproj" />
-  <Project Path="src/Terminal.Gui.Stanza.Generators/Terminal.Gui.Stanza.Generators.csproj" />
-  <Project Path="src/Terminal.Gui.Stanza.Tests/Terminal.Gui.Stanza.Tests.csproj" />
-  <Project Path="src/Terminal.Gui.Stanza/Typical.Generators.csproj" /> -->
   <Folder Name="/src/">
     <Project Path="src/Terminal.Gui.Stanza/Terminal.Gui.Stanza.csproj" />
     <Project Path="src/Terminal.Gui.Stanza.Tests/Terminal.Gui.Stanza.Tests.csproj" />
@@ -11,5 +6,7 @@
     <Project Path="src/Terminal.Gui.Stanza.Generators/Terminal.Gui.Stanza.Generators.csproj" />
     <Project Path="src/Terminal.Gui.Stanza.Generators.Tests/Terminal.Gui.Stanza.Generators.Tests.csproj" />
   </Folder>
-
+  <Folder Name="/samples/">
+    <Project Path="samples/Terminal.Gui.Stanza.Demo/Terminal.Gui.Stanza.Demo.csproj" />
+  </Folder>
 </Solution>

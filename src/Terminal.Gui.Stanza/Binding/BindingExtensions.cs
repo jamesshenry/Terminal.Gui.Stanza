@@ -2,14 +2,27 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Terminal.Gui.ViewBase;
+using Terminal.Gui;
+using Terminal.Gui.Stanza.Abstractions;
 using Terminal.Gui.Views;
-
+using Terminal.Gui.ViewBase;
 
 namespace Terminal.Gui.Stanza.Binding;
 
 public static class BindingExtensions
 {
+    extension(View view)
+    {
+        public string BindText { get => string.Empty; set { } }
+        public string BindChecked { get => string.Empty; set { } }
+        public string BindValue { get => string.Empty; set { } }
+        public string BindCommand { get => string.Empty; set { } }
+        public string BindVisible { get => string.Empty; set { } }
+        public string BindEnabled { get => string.Empty; set { } }
+    }
+
+    #region Standard Extension Methods (Pre-C# 14 style or specifically for ObservableObject)
+
     /// <summary>
     /// Generic One-Way Binding: VM -> UI
     /// Works for strings, bools, ints, or custom objects.
@@ -22,9 +35,19 @@ public static class BindingExtensions
     )
     {
         string propertyName =
-            expression?.Split('.').Last()
+            expression?.Split('.').Last()?.Trim('(', ')')
             ?? throw new ArgumentException("Could not determine property name from expression.");
 
+        return viewModel.Bind(propertyName, propertyExpression, updateUi);
+    }
+
+    public static IDisposable Bind<T>(
+        this ObservableObject viewModel,
+        string propertyName,
+        Func<T> propertyExpression,
+        Action<T> updateUi
+    )
+    {
         viewModel.PropertyChanged += Handler;
         updateUi(propertyExpression());
 
@@ -34,92 +57,205 @@ public static class BindingExtensions
         {
             if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
             {
-                updateUi(propertyExpression());
+                var newValue = propertyExpression();
+                StanzaConfig.Logger?.Log($"[Bind] Property '{propertyName}' changed on ViewModel. Updating UI to '{newValue}'.");
+                updateUi(newValue);
             }
         }
     }
 
-    /// <summary>
-    /// Two-Way String Binding: VM <-> TextField
-    /// </summary>
-    public static IDisposable BindText(
+    public static IDisposable BindTextTo(
         this ObservableObject viewModel,
         View target,
+        Func<string> getter,
+        Action<string>? setter = null,
+        [CallerArgumentExpression(nameof(getter))] string? expression = null
+    )
+    {
+        string propertyName = expression?.Split('.').Last()?.Trim('(', ')') ?? "Text";
+        return viewModel.BindTextTo(target, propertyName, getter, setter);
+    }
+
+    public static IDisposable BindTextTo(
+        this ObservableObject viewModel,
+        View target,
+        string propertyName,
         Func<string> getter,
         Action<string>? setter = null
     )
     {
-        var vmToUi = viewModel.Bind(
-            getter,
-            val =>
-            {
-                if (target.Text != val)
-                {
-                    target.Text = val;
-                    target.SetNeedsDraw();
-                }
-            }
-        );
+        bool updatingFromUi = false;
 
-        if (setter != null)
+        if (target is TextField textField)
         {
-            void OnTextChanged(object? s, EventArgs e) => setter(target.Text);
-            target.TextChanged += OnTextChanged;
+            var vmToUi = viewModel.Bind(
+                propertyName,
+                getter,
+                val =>
+                {
+                    if (updatingFromUi) return;
 
-            return new DisposableAction(() =>
+                    if (textField.Value != val)
+                    {
+                        StanzaConfig.Logger?.Log($"[BindText] VM -> TextField Value update: '{val}'");
+                        textField.Value = val;
+                        textField.SetNeedsDraw();
+                    }
+                }
+            );
+
+            if (setter != null)
             {
-                vmToUi.Dispose();
-                target.TextChanged -= OnTextChanged;
-            });
-        }
+                EventHandler<Terminal.Gui.App.ValueChangedEventArgs<string>> onValueChanged = (s, e) =>
+                {
+                    if (textField.Value == getter()) return;
 
-        return vmToUi;
+                    updatingFromUi = true;
+                    try
+                    {
+                        StanzaConfig.Logger?.Log($"[BindText] TextField Value -> VM update: '{textField.Value}'");
+                        setter(textField.Value);
+                    }
+                    finally
+                    {
+                        updatingFromUi = false;
+                    }
+                };
+                textField.ValueChanged += onValueChanged;
+
+                return new DisposableAction(() =>
+                {
+                    vmToUi.Dispose();
+                    textField.ValueChanged -= onValueChanged;
+                });
+            }
+
+            return vmToUi;
+        }
+        else
+        {
+            var vmToUi = viewModel.Bind(
+                propertyName,
+                getter,
+                val =>
+                {
+                    if (updatingFromUi) return;
+
+                    if (target.Text != val)
+                    {
+                        StanzaConfig.Logger?.Log($"[BindText] VM -> UI text update on '{target.Id ?? target.GetType().Name}': '{val}'");
+                        target.Text = val;
+                        target.SetNeedsDraw();
+                    }
+                }
+            );
+
+            if (setter != null)
+            {
+                void OnTextChanged(object? s, EventArgs e)
+                {
+                    if (target.Text == getter()) return;
+
+                    updatingFromUi = true;
+                    try
+                    {
+                        StanzaConfig.Logger?.Log($"[BindText] UI -> VM text update on '{target.Id ?? target.GetType().Name}': '{target.Text}'");
+                        setter(target.Text);
+                    }
+                    finally
+                    {
+                        updatingFromUi = false;
+                    }
+                }
+                target.TextChanged += OnTextChanged;
+
+                return new DisposableAction(() =>
+                {
+                    vmToUi.Dispose();
+                    target.TextChanged -= OnTextChanged;
+                });
+            }
+
+            return vmToUi;
+        }
     }
 
-    /// <summary>
-    /// Two-Way Boolean Binding: VM <-> CheckBox
-    /// </summary>
-    public static IDisposable BindChecked(
+    public static IDisposable BindCheckedTo(
         this ObservableObject viewModel,
         CheckBox checkBox,
+        Func<bool> getter,
+        Action<bool> setter,
+        [CallerArgumentExpression(nameof(getter))] string? expression = null
+    )
+    {
+        string propertyName = expression?.Split('.').Last()?.Trim('(', ')') ?? "Checked";
+        return viewModel.BindCheckedTo(checkBox, propertyName, getter, setter);
+    }
+
+    public static IDisposable BindCheckedTo(
+        this ObservableObject viewModel,
+        CheckBox checkBox,
+        string propertyName,
         Func<bool> getter,
         Action<bool> setter
     )
     {
+        bool updatingFromUi = false;
+
         var vmToUi = viewModel.Bind(
+            propertyName,
             getter,
             val =>
             {
+                if (updatingFromUi) return;
+
                 var newState = val ? CheckState.Checked : CheckState.UnChecked;
                 if (checkBox.Value != newState)
                 {
+                    StanzaConfig.Logger?.Log($"[BindChecked] VM -> UI checked update on '{checkBox.Id ?? checkBox.GetType().Name}': '{val}'");
                     checkBox.Value = newState;
                     checkBox.SetNeedsDraw();
                 }
             }
         );
 
-        void OnUiChanged(object? s, EventArgs e) => setter(checkBox.Value == CheckState.Checked);
-        checkBox.Accepted += OnUiChanged;
+        EventHandler<Terminal.Gui.App.ValueChangedEventArgs<CheckState>> onValueChanged = (s, e) =>
+        {
+            var isChecked = checkBox.Value == CheckState.Checked;
+            if (isChecked == getter()) return;
+
+            updatingFromUi = true;
+            try
+            {
+                StanzaConfig.Logger?.Log($"[BindChecked] UI -> VM checked update on '{checkBox.Id ?? checkBox.GetType().Name}': '{isChecked}'");
+                setter(isChecked);
+            }
+            finally
+            {
+                updatingFromUi = false;
+            }
+        };
+        checkBox.ValueChanged += onValueChanged;
 
         return new DisposableAction(() =>
         {
             vmToUi.Dispose();
-            checkBox.Accepted -= OnUiChanged;
+            checkBox.ValueChanged -= onValueChanged;
         });
     }
 
-    /// <summary>
-    /// Command: Connects a ViewModel command to a Button.
-    /// </summary>
-    public static IDisposable BindCommand(
-        this ObservableObject _,
+    public static IDisposable BindCommandTo(
+        this ObservableObject viewModel,
         IRelayCommand command,
         Button button
     )
     {
         void UpdateEnabled(object? s, EventArgs e) => button.Enabled = command.CanExecute(null);
-        void OnAccept(object? s, EventArgs e) => command.Execute(null);
+        void OnAccept(object? s, EventArgs e)
+        {
+            StanzaConfig.Logger?.Log($"[BindCommand] Button '{button.Id ?? button.GetType().Name}' clicked. Executing command.");
+            command.Execute(null);
+        }
 
         command.CanExecuteChanged += UpdateEnabled;
         button.Accepting += OnAccept;
@@ -131,4 +267,84 @@ public static class BindingExtensions
             button.Accepting -= OnAccept;
         });
     }
+
+    #endregion
+
+    #region Generator Emitter Targets (Used by InitializeComponent)
+
+    /// <summary>
+    /// Two-Way String Binding: VM <-> View.Text
+    /// </summary>
+    public static IDisposable ApplyBindText<TViewModel>(
+        this View target,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, string> getter,
+        Action<TViewModel, string>? setter = null
+    ) where TViewModel : ObservableObject
+    {
+        return viewModel.BindTextTo(target, propertyName, () => getter(viewModel), setter != null ? val => setter(viewModel, val) : null);
+    }
+
+    /// <summary>
+    /// Two-Way Boolean Binding: VM <-> CheckBox
+    /// </summary>
+    public static IDisposable ApplyBindChecked<TViewModel>(
+        this CheckBox checkBox,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, bool> getter,
+        Action<TViewModel, bool>? setter = null
+    ) where TViewModel : ObservableObject
+    {
+        return viewModel.BindCheckedTo(checkBox, propertyName, () => getter(viewModel), val => setter?.Invoke(viewModel, val));
+    }
+
+    /// <summary>
+    /// Command: Connects a ViewModel command to a Button.
+    /// </summary>
+    public static IDisposable ApplyBindCommand<TViewModel>(
+        this Button button,
+        TViewModel viewModel,
+        IRelayCommand command
+    ) where TViewModel : ObservableObject
+    {
+        return viewModel.BindCommandTo(command, button);
+    }
+
+    /// <summary>
+    /// Binds the Visible property to a VM property.
+    /// </summary>
+    public static IDisposable ApplyBindVisible<TViewModel>(
+        this View view,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, bool> getter
+    ) where TViewModel : ObservableObject
+    {
+        return viewModel.Bind(
+            propertyName,
+            () => getter(viewModel),
+            val => view.Visible = val
+        );
+    }
+
+    /// <summary>
+    /// Binds the Enabled property to a VM property.
+    /// </summary>
+    public static IDisposable ApplyBindEnabled<TViewModel>(
+        this View view,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, bool> getter
+    ) where TViewModel : ObservableObject
+    {
+        return viewModel.Bind(
+            propertyName,
+            () => getter(viewModel),
+            val => view.Enabled = val
+        );
+    }
+
+    #endregion
 }

@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <!-- <PackageReference Include="CommunityToolkit.Mvvm" /> -->
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
 

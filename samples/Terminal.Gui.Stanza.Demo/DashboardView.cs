@@ -1,8 +1,6 @@
-using Terminal.Gui.Stanza.Abstractions;
+using Terminal.Gui.Stanza;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using Terminal.Gui.Stanza.Binding;
-using Terminal.Gui.Stanza.Layout;
 
 namespace Terminal.Gui.Stanza.Demo;
 

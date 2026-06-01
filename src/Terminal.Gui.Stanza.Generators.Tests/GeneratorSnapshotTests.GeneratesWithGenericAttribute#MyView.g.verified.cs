@@ -3,11 +3,12 @@
 #nullable enable
 namespace TestNamespace;
 
+using System.Linq;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
-using Terminal.Gui.Stanza.Binding;
+using Terminal.Gui.Stanza;
 
-partial class MyView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamespace.MyViewModel>
+partial class MyView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.MyViewModel>
 {
     public MyView() : base()
     {
@@ -23,21 +24,26 @@ partial class MyView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamespace.MyV
 
     private TestNamespace.MyViewModel? _viewModel;
     public TestNamespace.MyViewModel? ViewModel {
-        get => field;
+        get => _viewModel;
         set {
-            field = value;
+            if (object.ReferenceEquals(_viewModel, value)) return;
+
+            _bindingContext.Dispose();
+            _viewModel = value;
+            _bindingContext = new BindingContext();
+
             if (value != null) InitializeComponent();
         }
     }
 
-    private readonly BindingContext _bindingContext = new();
+    private BindingContext _bindingContext = new();
     public BindingContext BindingContext => _bindingContext;
 
     protected void Bind<T>(System.Func<T> getter, System.Action<T> update, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(getter))] string expr = "")
     {
         if (this.ViewModel == null)
             throw new System.InvalidOperationException("ViewModel must be set before calling Bind.");
-        _bindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));
+        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));
     }
 
     protected override void Dispose(bool disposing)
@@ -60,6 +66,6 @@ partial class MyView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamespace.MyV
         // 3. Wire bindings
 
         // 4. Add to view hierarchy
-        this.Add(MyLabel);
+        if (!this.SubViews.Contains(MyLabel)) this.Add(MyLabel);
     }
 }

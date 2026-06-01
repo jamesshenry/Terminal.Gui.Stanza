@@ -4,8 +4,8 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Terminal.Gui.Stanza.Abstractions;
-using Terminal.Gui.Stanza.Abstractions.IR;
+using Terminal.Gui.Stanza;
+using Terminal.Gui.Stanza.IR;
 
 namespace Terminal.Gui.Stanza.Generators;
 
@@ -70,7 +70,7 @@ internal class TuiViewParser
                 {
                     subviewsWithViewModel.Add(prop.Identifier.Text);
                 }
-                ParseMemberInitializer(prop.Identifier.Text, prop.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews);
+                ParseMemberInitializer(prop.Identifier.Text, prop.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews, semanticModel);
             }
             else if (member is FieldDeclarationSyntax field)
             {
@@ -81,7 +81,7 @@ internal class TuiViewParser
                     {
                         subviewsWithViewModel.Add(variable.Identifier.Text);
                     }
-                    ParseMemberInitializer(variable.Identifier.Text, variable.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews);
+                    ParseMemberInitializer(variable.Identifier.Text, variable.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews, semanticModel);
                 }
             }
         }
@@ -167,7 +167,7 @@ internal class TuiViewParser
             foreach (var param in ctorSymbol.Parameters)
             {
                 var typeSymbol = param.Type as INamedTypeSymbol;
-                if (typeSymbol != null && InheritsFromObservableObject(typeSymbol))
+                if (typeSymbol != null && ImplementsINotifyPropertyChanged(typeSymbol))
                 {
                     return typeSymbol;
                 }
@@ -184,18 +184,19 @@ internal class TuiViewParser
         return null;
     }
 
-    private bool InheritsFromObservableObject(ITypeSymbol? typeSymbol)
+    private bool ImplementsINotifyPropertyChanged(ITypeSymbol? typeSymbol)
     {
-        var current = typeSymbol;
-        while (current != null)
+        if (typeSymbol == null)
         {
-            if (current.ToDisplayString() == "CommunityToolkit.Mvvm.ComponentModel.ObservableObject")
-            {
-                return true;
-            }
-            current = current.BaseType;
+            return false;
         }
-        return false;
+
+        if (typeSymbol.ToDisplayString() == "System.ComponentModel.INotifyPropertyChanged")
+        {
+            return true;
+        }
+
+        return typeSymbol.AllInterfaces.Any(i => i.ToDisplayString() == "System.ComponentModel.INotifyPropertyChanged");
     }
 
     private void ParseMemberInitializer(
@@ -205,7 +206,8 @@ internal class TuiViewParser
         List<BindingInfo> bindings,
         List<LayoutConstraint> constraints,
         INamedTypeSymbol? vmSymbol,
-        HashSet<string> declaredSubviews)
+        HashSet<string> declaredSubviews,
+        SemanticModel semanticModel)
     {
         InitializerExpressionSyntax? initializerExpr = null;
         if (initializer is ObjectCreationExpressionSyntax objCreation)
@@ -229,7 +231,7 @@ internal class TuiViewParser
                     if (left.StartsWith("Bind"))
                     {
                         // Binding: BindText = nameof(vm.Name)
-                        var vmProp = ExtractNameof(right);
+                        var vmProp = ExtractNameof(assignment.Right, semanticModel);
                         var isWritable = true;
                         var isString = true;
                         if (vmSymbol != null)
@@ -254,7 +256,7 @@ internal class TuiViewParser
                     }
                     else if (left == "Below" || left == "RightOf")
                     {
-                        var referencedView = ExtractNameof(right);
+                        var referencedView = ExtractNameof(assignment.Right, semanticModel);
                         var targetProp = left == "Below" ? "Y" : "X";
                         var targetExpr = left == "Below" ? $"Pos.Bottom({referencedView})" : $"Pos.Right({referencedView})";
                         
@@ -284,12 +286,48 @@ internal class TuiViewParser
         }
     }
 
-    private string ExtractNameof(string expression)
+    private string ExtractNameof(ExpressionSyntax expression, SemanticModel semanticModel)
     {
-        if (expression.StartsWith("nameof("))
+        if (expression is InvocationExpressionSyntax invocation &&
+            invocation.Expression is IdentifierNameSyntax identifier &&
+            identifier.Identifier.Text == "nameof" &&
+            invocation.ArgumentList.Arguments.Count == 1)
         {
-            return expression.Substring(7, expression.Length - 8).Split('.').Last();
+            var argExpression = invocation.ArgumentList.Arguments[0].Expression;
+            if (argExpression is MemberAccessExpressionSyntax memberAccess)
+            {
+                return memberAccess.Name.Identifier.Text;
+            }
+
+            if (argExpression is IdentifierNameSyntax argIdentifier)
+            {
+                return argIdentifier.Identifier.Text;
+            }
+
+            var symbol = semanticModel.GetSymbolInfo(argExpression).Symbol;
+            if (symbol != null)
+            {
+                return symbol.Name;
+            }
+
+            return argExpression.ToString().Split('.').Last();
         }
-        return expression.Trim('"');
+
+        if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+        {
+            return literal.Token.ValueText;
+        }
+
+        if (expression is IdentifierNameSyntax identifierExpression)
+        {
+            return identifierExpression.Identifier.Text;
+        }
+
+        if (expression is MemberAccessExpressionSyntax accessExpression)
+        {
+            return accessExpression.Name.Identifier.Text;
+        }
+
+        return expression.ToString().Trim('"');
     }
 }

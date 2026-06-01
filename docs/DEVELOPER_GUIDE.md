@@ -24,7 +24,7 @@ The generated method is placed in a `.g.cs` file alongside the user-written decl
 
 ### The Three-Stage Pipeline
 
-```
+```text
 User Code (.cs)               Parser                     Emitter
     ↓                            ↓                          ↓
 [TuiView] class          IR Models (Records)      Generated .g.cs
@@ -37,12 +37,12 @@ Layout References    DependencyResolver              ↓
 
 ### Project Structure
 
-| Project | Purpose |
-|---------|---------|
-| [Abstractions](../src/Terminal.Gui.Stanza.Abstractions) | Marker attributes, IR models, layout enums (zero dependencies) |
-| [Generators](../src/Terminal.Gui.Stanza.Generators) | Roslyn `IIncrementalGenerator` with Parser, Resolver, Emitter |
-| [Core (Stanza)](../src/Terminal.Gui.Stanza) | Runtime: `BindableView<T>`, `BindingContext`, extension methods |
-| [Tests](../src/Terminal.Gui.Stanza.Generators.Tests) | Snapshot tests verifying generated code against verified outputs |
+| Project                                                 | Purpose                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| [Abstractions](../src/Terminal.Gui.Stanza.Abstractions) | Marker attributes, IR models, layout enums (zero dependencies)   |
+| [Generators](../src/Terminal.Gui.Stanza.Generators)     | Roslyn `IIncrementalGenerator` with Parser, Resolver, Emitter    |
+| [Core (Stanza)](../src/Terminal.Gui.Stanza)             | Runtime: `BindableView<T>`, `BindingContext`, extension methods  |
+| [Tests](../src/Terminal.Gui.Stanza.Generators.Tests)    | Snapshot tests verifying generated code against verified outputs |
 
 ---
 
@@ -67,12 +67,12 @@ public partial class MyView : BindableView<MyViewModel>
 
 The [TuiViewGenerator](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs#L11-L60) orchestrates the pipeline:
 
-| Stage | Link | Purpose |
-|-------|------|---------|
-| **Syntax Detection** | [TuiViewGenerator.Initialize()](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs#L12-L18) | Use Roslyn's `SyntaxProvider` to find classes with `[TuiView]` attribute |
-| **Symbol Resolution** | [TuiViewGenerator.Initialize()](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs#L26-L27) | Resolve `TuiViewAttribute` and `TuiViewAttribute<T>` types from compilation |
+| Stage                    | Link                                                                                               | Purpose                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Syntax Detection**     | [TuiViewGenerator.Initialize()](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs#L12-L18) | Use Roslyn's `SyntaxProvider` to find classes with `[TuiView]` attribute       |
+| **Symbol Resolution**    | [TuiViewGenerator.Initialize()](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs#L26-L27) | Resolve `TuiViewAttribute` and `TuiViewAttribute<T>` types from compilation    |
 | **Parser Instantiation** | [TuiViewGenerator.Initialize()](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs#L29-L31) | Create `TuiViewParser`, `DependencyResolver`, and `InitializeComponentEmitter` |
-| **IR Generation** | [TuiViewParser.Parse()](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L22-L25) | Extract attributes, properties, bindings → produce `ViewDeclaration` IR |
+| **IR Generation**        | [TuiViewParser.Parse()](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L22-L25)            | Extract attributes, properties, bindings → produce `ViewDeclaration` IR        |
 
 #### Parser Deep-Dive
 
@@ -80,13 +80,13 @@ The [TuiViewParser](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs) walk
 
 **What the parser extracts:**
 
-| Element | Parser Logic | IR Model |
-|---------|--------------|----------|
-| **Class metadata** | [Lines 26-30](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L26-L30) | `ViewDeclaration.ClassName`, `.Namespace`, `.BaseType` |
-| **ViewModel type** | [Lines 36-55](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L36-L55) | `ViewDeclaration.ViewModelType` (resolved from constructor param, generic arg, or base type) |
-| **Property assignments** | [Lines 72-76](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L72-L76) | `PropertyAssignment` records for each field/property initializer |
-| **Binding extensions** | [Lines 128-135](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L128-L135) | `BindingInfo` records (e.g., `BindText = nameof(vm.Name)`) |
-| **Layout constraints** | [Lines 136-151](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L136-L151) | `LayoutConstraint` records (e.g., `Y = Pos.Bottom(otherView)`) |
+| Element                  | Parser Logic                                                                      | IR Model                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **Class metadata**       | [Lines 26-30](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L26-L30)     | `ViewDeclaration.ClassName`, `.Namespace`, `.BaseType`                                       |
+| **ViewModel type**       | [Lines 36-55](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L36-L55)     | `ViewDeclaration.ViewModelType` (resolved from constructor param, generic arg, or base type) |
+| **Property assignments** | [Lines 72-76](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L72-L76)     | `PropertyAssignment` records for each field/property initializer                             |
+| **Binding extensions**   | [Lines 128-135](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L128-L135) | `BindingInfo` records (e.g., `BindText = nameof(vm.Name)`)                                   |
+| **Layout constraints**   | [Lines 136-151](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs#L136-L151) | `LayoutConstraint` records (e.g., `Y = Pos.Bottom(otherView)`)                               |
 
 **Example property parsing:**
 
@@ -108,17 +108,17 @@ The [DependencyResolver](../src/Terminal.Gui.Stanza.Generators/DependencyResolve
 
 **Algorithm**: [Kahn's topological sort](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L13-L49):
 
-| Step | Code Link | Action |
-|------|-----------|--------|
-| **Build graph** | [Lines 16-27](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L16-L27) | Create adjacency list: `view → [dependent views]` |
-| **In-degree calculation** | [Lines 16-27](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L16-L27) | Track how many views each depends on |
-| **Queue initialization** | [Lines 30-35](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L30-L35) | Start with zero-dependency views |
-| **Topological sort** | [Lines 37-46](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L37-L46) | Dequeue views, decrement dependents' in-degrees, enqueue when zero |
-| **Circular dependency handling** | [Lines 48-55](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L48-L55) | If sort incomplete, append missing views (error case) |
+| Step                             | Code Link                                                                          | Action                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Build graph**                  | [Lines 16-27](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L16-L27) | Create adjacency list: `view → [dependent views]`                  |
+| **In-degree calculation**        | [Lines 16-27](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L16-L27) | Track how many views each depends on                               |
+| **Queue initialization**         | [Lines 30-35](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L30-L35) | Start with zero-dependency views                                   |
+| **Topological sort**             | [Lines 37-46](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L37-L46) | Dequeue views, decrement dependents' in-degrees, enqueue when zero |
+| **Circular dependency handling** | [Lines 48-55](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs#L48-L55) | If sort incomplete, append missing views (error case)              |
 
 **Example:**
 
-```
+```text
 Input constraints:
   ViewB.Y = Pos.Bottom(ViewA)
 
@@ -135,12 +135,12 @@ The [InitializeComponentEmitter](../src/Terminal.Gui.Stanza.Generators/Initializ
 
 **Generated structure** (4 phases):
 
-| Phase | Code Link | Purpose |
-|-------|-----------|---------|
-| **1. Instantiate controls** | [Lines 27-30](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L27-L30) | Create views in dependency order using `??=` (coalesce-assign) |
+| Phase                              | Code Link                                                                                  | Purpose                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| **1. Instantiate controls**        | [Lines 27-30](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L27-L30) | Create views in dependency order using `??=` (coalesce-assign)       |
 | **2. Apply properties and layout** | [Lines 32-47](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L32-L47) | Set string properties (e.g., `Text`, `Width`) and layout constraints |
-| **3. Wire bindings** | [Lines 49-68](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L49-L68) | Call `BindingContext.AddBinding()` for data bindings |
-| **4. Add to view hierarchy** | [Lines 70-74](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L70-L74) | Add views to parent via `this.Add(viewName)` |
+| **3. Wire bindings**               | [Lines 49-68](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L49-L68) | Call `BindingContext.AddBinding()` for data bindings                 |
+| **4. Add to view hierarchy**       | [Lines 70-74](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs#L70-L74) | Add views to parent via `this.Add(viewName)`                         |
 
 **Generated code signature:**
 
@@ -189,12 +189,12 @@ The `.g.cs` file is placed alongside the original `.cs` file, and the partial cl
 
 The IR decouples generator logic from Roslyn symbols. All IR models are immutable records in [Terminal.Gui.Stanza.Abstractions.IR](../src/Terminal.Gui.Stanza.Abstractions/IR):
 
-| Model | Purpose | Link |
-|-------|---------|------|
-| `ViewDeclaration` | Metadata for the entire view class | [ViewDeclaration.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/ViewDeclaration.cs) |
-| `PropertyAssignment` | A property setting (e.g., `Text = "Hello"`) | [PropertyAssignment.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/PropertyAssignment.cs) |
-| `LayoutConstraint` | A relative layout reference (e.g., `Y = Pos.Bottom(other)`) | [LayoutConstraint.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/LayoutConstraint.cs) |
-| `BindingInfo` | A data binding (e.g., `BindText = nameof(vm.Text)`) | [BindingInfo.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/BindingInfo.cs) |
+| Model                | Purpose                                                     | Link                                                                                      |
+| -------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `ViewDeclaration`    | Metadata for the entire view class                          | [ViewDeclaration.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/ViewDeclaration.cs)       |
+| `PropertyAssignment` | A property setting (e.g., `Text = "Hello"`)                 | [PropertyAssignment.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/PropertyAssignment.cs) |
+| `LayoutConstraint`   | A relative layout reference (e.g., `Y = Pos.Bottom(other)`) | [LayoutConstraint.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/LayoutConstraint.cs)     |
+| `BindingInfo`        | A data binding (e.g., `BindText = nameof(vm.Text)`)         | [BindingInfo.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/BindingInfo.cs)               |
 
 **Why IR matters:**
 
@@ -223,10 +223,10 @@ Example: `LayoutConstraint("ViewB", "Y", "Bottom", "ViewA")` → `ViewB.Y = Pos.
 
 Bindings can be one-way (VM → UI) or two-way (VM ↔ UI):
 
-| Mode | Data Flow | Use Case |
-|------|-----------|----------|
-| `OneWay` | VM → UI | Read-only UI (labels) |
-| `TwoWay` | VM ↔ UI | Editable fields (text boxes) |
+| Mode     | Data Flow | Use Case                     |
+| -------- | --------- | ---------------------------- |
+| `OneWay` | VM → UI   | Read-only UI (labels)        |
+| `TwoWay` | VM ↔ UI   | Editable fields (text boxes) |
 
 See [BindingInfo](../src/Terminal.Gui.Stanza.Abstractions/IR/BindingInfo.cs) and [BindingMode enum](../src/Terminal.Gui.Stanza.Abstractions/BindingMode.cs).
 
@@ -448,18 +448,18 @@ dotnet test --filter GeneratorSnapshotTests -- --accept
 
 ## Key Files Reference
 
-| File | Purpose |
-|------|---------|
-| [TuiViewGenerator.cs](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs) | Main `IIncrementalGenerator` entry point; orchestrates pipeline |
-| [TuiViewParser.cs](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs) | Extracts [TuiView] attributes → IR models |
-| [DependencyResolver.cs](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs) | Topologically sorts views by layout constraints |
-| [InitializeComponentEmitter.cs](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs) | Generates C# code for InitializeComponent() |
-| [ViewDeclaration.cs](../src/Terminal.Gui.Stanza/IR/ViewDeclaration.cs) | IR model for a decorated view class |
-| [LayoutConstraint.cs](../src/Terminal.Gui.Stanza/IR/LayoutConstraint.cs) | IR model for relative layout references |
-| [PropertyAssignment.cs](../src/Terminal.Gui.Stanza/IR/PropertyAssignment.cs) | IR model for property initializers |
-| [BindingInfo.cs](../src/Terminal.Gui.Stanza/IR/BindingInfo.cs) | IR model for MVVM data bindings |
-| [TuiViewAttribute.cs](../src/Terminal.Gui.Stanza/TuiViewAttribute.cs) | Marker attribute and reserved metadata contract for generated views |
-| [GeneratorSnapshotTests.cs](../src/Terminal.Gui.Stanza.Generators.Tests/GeneratorSnapshotTests.cs) | Snapshot tests with verified outputs |
+| File                                                                                                 | Purpose                                                             |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [TuiViewGenerator.cs](../src/Terminal.Gui.Stanza.Generators/TuiViewGenerator.cs)                     | Main `IIncrementalGenerator` entry point; orchestrates pipeline     |
+| [TuiViewParser.cs](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs)                           | Extracts [TuiView] attributes → IR models                           |
+| [DependencyResolver.cs](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs)                 | Topologically sorts views by layout constraints                     |
+| [InitializeComponentEmitter.cs](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs) | Generates C# code for InitializeComponent()                         |
+| [ViewDeclaration.cs](../src/Terminal.Gui.Stanza/IR/ViewDeclaration.cs)                               | IR model for a decorated view class                                 |
+| [LayoutConstraint.cs](../src/Terminal.Gui.Stanza/IR/LayoutConstraint.cs)                             | IR model for relative layout references                             |
+| [PropertyAssignment.cs](../src/Terminal.Gui.Stanza/IR/PropertyAssignment.cs)                         | IR model for property initializers                                  |
+| [BindingInfo.cs](../src/Terminal.Gui.Stanza/IR/BindingInfo.cs)                                       | IR model for MVVM data bindings                                     |
+| [TuiViewAttribute.cs](../src/Terminal.Gui.Stanza/TuiViewAttribute.cs)                                | Marker attribute and reserved metadata contract for generated views |
+| [GeneratorSnapshotTests.cs](../src/Terminal.Gui.Stanza.Generators.Tests/GeneratorSnapshotTests.cs)   | Snapshot tests with verified outputs                                |
 
 ---
 

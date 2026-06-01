@@ -1,5 +1,4 @@
-namespace Terminal.Gui.Stanza.Binding;
-
+namespace Terminal.Gui.Stanza;
 /// <summary>
 /// Manages the lifecycle of multiple bindings, providing centralized cleanup.
 /// </summary>

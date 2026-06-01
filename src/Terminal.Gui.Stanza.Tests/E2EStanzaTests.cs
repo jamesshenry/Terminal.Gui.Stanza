@@ -1,10 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
-using Terminal.Gui.Stanza;
-using Terminal.Gui.Stanza.Abstractions;
-using Terminal.Gui.Stanza.Binding;
-using Terminal.Gui.Stanza.Layout;
+
 using Terminal.Gui.Views;
 
 namespace Terminal.Gui.Stanza.Tests;

@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza.Abstractions.IR;
+namespace Terminal.Gui.Stanza.IR;
 
 public record LayoutConstraint(
     string SourceView,

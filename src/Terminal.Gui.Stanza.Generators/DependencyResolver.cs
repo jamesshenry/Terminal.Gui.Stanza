@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Terminal.Gui.Stanza.Abstractions.IR;
+using Terminal.Gui.Stanza.IR;
 
 namespace Terminal.Gui.Stanza.Generators;
 
@@ -11,6 +11,11 @@ internal class DependencyResolver
     /// If viewB.Y = Pos.Bottom(viewA), then viewA must be instantiated before viewB.
     /// </summary>
     public List<string> ResolveOrder(IEnumerable<LayoutConstraint> constraints, IEnumerable<string> allViewNames)
+    {
+        return ResolveOrder(constraints, allViewNames, out _);
+    }
+
+    public List<string> ResolveOrder(IEnumerable<LayoutConstraint> constraints, IEnumerable<string> allViewNames, out bool hasCycle)
     {
         // Build adjacency list: viewName → List of views that depend on it
         var graph = new Dictionary<string, List<string>>();
@@ -55,7 +60,8 @@ internal class DependencyResolver
             }
         }
 
-        if (result.Count != viewNamesList.Count)
+        hasCycle = result.Count != viewNamesList.Count;
+        if (hasCycle)
         {
             // Circular dependency detected or incomplete sort.
             // Append missing views to avoid silent drop from instantiation.

@@ -1,5 +1,4 @@
-namespace Terminal.Gui.Stanza.Binding;
-
+namespace Terminal.Gui.Stanza;
 public interface IStanzaView<TViewModel> : IDisposable 
     where TViewModel : System.ComponentModel.INotifyPropertyChanged
 {

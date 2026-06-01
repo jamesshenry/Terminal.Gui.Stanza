@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Terminal.Gui.Stanza.Abstractions.IR;
-using Terminal.Gui.Stanza.Abstractions;
+using Terminal.Gui.Stanza.IR;
+using Terminal.Gui.Stanza;
 
 namespace Terminal.Gui.Stanza.Generators;
 
@@ -15,13 +15,14 @@ internal class InitializeComponentEmitter
         sb.AppendLine("#nullable enable");
         sb.AppendLine($"namespace {viewDecl.Namespace};");
         sb.AppendLine();
+        sb.AppendLine("using System.Linq;");
         sb.AppendLine("using Terminal.Gui;");
         sb.AppendLine("using Terminal.Gui.ViewBase;");
-        sb.AppendLine("using Terminal.Gui.Stanza.Binding;");
+        sb.AppendLine("using Terminal.Gui.Stanza;");
         sb.AppendLine();
         if (!string.IsNullOrEmpty(viewDecl.ViewModelType))
         {
-            sb.AppendLine($"partial class {viewDecl.ClassName} : Terminal.Gui.Stanza.Binding.IStanzaView<{viewDecl.ViewModelType}>");
+            sb.AppendLine($"partial class {viewDecl.ClassName} : Terminal.Gui.Stanza.IStanzaView<{viewDecl.ViewModelType}>");
             sb.AppendLine("{");
             if (viewDecl.GenerateParameterlessConstructor)
             {
@@ -44,23 +45,28 @@ internal class InitializeComponentEmitter
                 sb.AppendLine();
             }
 
-            // sb.AppendLine($"    private {viewDecl.ViewModelType}? _viewModel;");
+            sb.AppendLine($"    private {viewDecl.ViewModelType}? _viewModel;");
             sb.AppendLine($"    public {viewDecl.ViewModelType}? ViewModel {{");
-            sb.AppendLine("        get => field;");
+            sb.AppendLine("        get => _viewModel;");
             sb.AppendLine("        set {");
-            sb.AppendLine("            field = value;");
+            sb.AppendLine("            if (object.ReferenceEquals(_viewModel, value)) return;");
+            sb.AppendLine();
+            sb.AppendLine("            _bindingContext.Dispose();");
+            sb.AppendLine("            _viewModel = value;");
+            sb.AppendLine("            _bindingContext = new BindingContext();");
+            sb.AppendLine();
             sb.AppendLine("            if (value != null) InitializeComponent();");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
-            sb.AppendLine("    private readonly BindingContext _bindingContext = new();");
+            sb.AppendLine("    private BindingContext _bindingContext = new();");
             sb.AppendLine("    public BindingContext BindingContext => _bindingContext;");
             sb.AppendLine();
             sb.AppendLine("    protected void Bind<T>(System.Func<T> getter, System.Action<T> update, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(getter))] string expr = \"\")");
             sb.AppendLine("    {");
             sb.AppendLine("        if (this.ViewModel == null)");
             sb.AppendLine("            throw new System.InvalidOperationException(\"ViewModel must be set before calling Bind.\");");
-            sb.AppendLine("        _bindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));");
+            sb.AppendLine("        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));");
             sb.AppendLine("    }");
             sb.AppendLine();
             sb.AppendLine("    protected override void Dispose(bool disposing)");
@@ -147,7 +153,7 @@ internal class InitializeComponentEmitter
         sb.AppendLine("        // 4. Add to view hierarchy");
         foreach (var viewName in instantiationOrder)
         {
-            sb.AppendLine($"        this.Add({viewName});");
+            sb.AppendLine($"        if (!this.SubViews.Contains({viewName})) this.Add({viewName});");
         }
 
         sb.AppendLine("    }");

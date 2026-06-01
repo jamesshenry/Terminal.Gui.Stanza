@@ -26,8 +26,8 @@ Stanza eliminates "Glue Code" by treating UI definitions as a **Schema** rather 
 
 ## Key Namespaces
 
-- `Terminal.Gui.Stanza.Binding` — `BindingContext` and `BindingExtensions` (The MVVM glue).
-- `Terminal.Gui.Stanza.Layout` — C# 14 Extension properties for `Terminal.Gui.View` (The Layout DSL).
+- `Terminal.Gui.Stanza` — `BindingContext` and `BindingExtensions` (The MVVM glue).
+- `Terminal.Gui.Stanza` — C# 14 Extension properties for `Terminal.Gui.View` (The Layout DSL).
 - `Terminal.Gui.Stanza.Generators.IR` — The Intermediate Representation models that decouple TUI logic from Roslyn symbols.
 
 ## ADR Index (Architecture Decision Records)

@@ -23,7 +23,7 @@ Use a two-layer production architecture:
    - `[TuiView]` and `[TuiView<TViewModel>]`
    - layout and binding extension members such as `Below`, `RightOf`, and `BindText`
    - runtime binding helpers such as `BindingContext` and `BindingExtensions`
-   - IR records in the `Terminal.Gui.Stanza.Abstractions.IR` namespace shared with the generator implementation
+   - IR records in the `Terminal.Gui.Stanza.IR` namespace shared with the generator implementation
 
 2. `Terminal.Gui.Stanza.Generators`
    Owns compile-time transformation:

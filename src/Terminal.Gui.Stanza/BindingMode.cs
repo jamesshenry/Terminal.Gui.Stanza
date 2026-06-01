@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza.Abstractions;
+namespace Terminal.Gui.Stanza;
 
 public enum BindingMode
 {

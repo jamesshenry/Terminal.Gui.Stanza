@@ -3,11 +3,12 @@
 #nullable enable
 namespace TestNamespace;
 
+using System.Linq;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
-using Terminal.Gui.Stanza.Binding;
+using Terminal.Gui.Stanza;
 
-partial class DashboardView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamespace.DashboardViewModel>
+partial class DashboardView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.DashboardViewModel>
 {
     public DashboardView() : base()
     {
@@ -23,21 +24,26 @@ partial class DashboardView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamesp
 
     private TestNamespace.DashboardViewModel? _viewModel;
     public TestNamespace.DashboardViewModel? ViewModel {
-        get => field;
+        get => _viewModel;
         set {
-            field = value;
+            if (object.ReferenceEquals(_viewModel, value)) return;
+
+            _bindingContext.Dispose();
+            _viewModel = value;
+            _bindingContext = new BindingContext();
+
             if (value != null) InitializeComponent();
         }
     }
 
-    private readonly BindingContext _bindingContext = new();
+    private BindingContext _bindingContext = new();
     public BindingContext BindingContext => _bindingContext;
 
     protected void Bind<T>(System.Func<T> getter, System.Action<T> update, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(getter))] string expr = "")
     {
         if (this.ViewModel == null)
             throw new System.InvalidOperationException("ViewModel must be set before calling Bind.");
-        _bindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));
+        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));
     }
 
     protected override void Dispose(bool disposing)
@@ -65,8 +71,8 @@ partial class DashboardView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamesp
         // 3. Wire bindings
 
         // 4. Add to view hierarchy
-        this.Add(FooterLabel);
-        this.Add(LeftPanel);
-        this.Add(RightPanel);
+        if (!this.SubViews.Contains(FooterLabel)) this.Add(FooterLabel);
+        if (!this.SubViews.Contains(LeftPanel)) this.Add(LeftPanel);
+        if (!this.SubViews.Contains(RightPanel)) this.Add(RightPanel);
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Terminal.Gui.Stanza.Abstractions;
+﻿namespace Terminal.Gui.Stanza;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public class TuiViewAttribute : Attribute

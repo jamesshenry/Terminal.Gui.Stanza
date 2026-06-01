@@ -1,5 +1,4 @@
-namespace Terminal.Gui.Stanza.Binding;
-
+namespace Terminal.Gui.Stanza;
 /// <summary>
 /// A simple disposable action that executes a delegate when disposed.
 /// Used for cleaning up event handlers and bindings.

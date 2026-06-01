@@ -8,6 +8,14 @@ namespace Terminal.Gui.Stanza.Generators;
 [Generator(LanguageNames.CSharp)]
 public class TuiViewGenerator : IIncrementalGenerator
 {
+    private static readonly DiagnosticDescriptor CircularLayoutDiagnostic = new(
+        id: "STN001",
+        title: "Circular layout dependency",
+        messageFormat: "Circular layout dependency detected in '{0}'. Layout order may be unstable.",
+        category: "Stanza.Generator",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var classDeclarations = context.SyntaxProvider
@@ -22,10 +30,10 @@ public class TuiViewGenerator : IIncrementalGenerator
         {
             var (compilation, classes) = source;
 
-            var tuiViewAttributeSymbol = compilation.GetTypeByMetadataName("Terminal.Gui.Stanza.Abstractions.TuiViewAttribute");
+            var tuiViewAttributeSymbol = compilation.GetTypeByMetadataName("Terminal.Gui.Stanza.TuiViewAttribute");
             if (tuiViewAttributeSymbol == null) return;
 
-            var genericTuiViewAttributeSymbol = compilation.GetTypeByMetadataName("Terminal.Gui.Stanza.Abstractions.TuiViewAttribute`1");
+            var genericTuiViewAttributeSymbol = compilation.GetTypeByMetadataName("Terminal.Gui.Stanza.TuiViewAttribute`1");
 
             var parser = new TuiViewParser(tuiViewAttributeSymbol, genericTuiViewAttributeSymbol);
             var resolver = new DependencyResolver();
@@ -54,7 +62,12 @@ public class TuiViewGenerator : IIncrementalGenerator
 
                     allViewNames.Remove("this");
 
-                    var orderedViews = resolver.ResolveOrder(viewDecl.LayoutConstraints, allViewNames);
+                    var orderedViews = resolver.ResolveOrder(viewDecl.LayoutConstraints, allViewNames, out var hasCycle);
+                    if (hasCycle)
+                    {
+                        var diagnostic = Diagnostic.Create(CircularLayoutDiagnostic, classDecl.Identifier.GetLocation(), viewDecl.ClassName);
+                        spc.ReportDiagnostic(diagnostic);
+                    }
 
                     var sourceCode = emitter.Emit(viewDecl, orderedViews);
                     spc.AddSource($"{viewDecl.ClassName}.g.cs", sourceCode);

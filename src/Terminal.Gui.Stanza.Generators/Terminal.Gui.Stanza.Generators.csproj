@@ -15,17 +15,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Terminal.Gui.Stanza.Abstractions\Terminal.Gui.Stanza.Abstractions.csproj" PrivateAssets="all" />
+    <!-- Compile shared IR files directly into the analyzer to keep it zero-dependency and netstandard2.0 compatible -->
+    <Compile Include="..\Terminal.Gui.Stanza\BindingMode.cs" Link="BindingMode.cs" />
+    <!-- <Compile Include="..\Terminal.Gui.Stanza\IsExternalInit.cs" Link="IsExternalInit.cs" /> -->
+    <Compile Include="..\Terminal.Gui.Stanza\IR\BindingInfo.cs" Link="IR\BindingInfo.cs" />
+    <Compile Include="..\Terminal.Gui.Stanza\IR\LayoutConstraint.cs" Link="IR\LayoutConstraint.cs" />
+    <Compile Include="..\Terminal.Gui.Stanza\IR\PropertyAssignment.cs" Link="IR\PropertyAssignment.cs" />
+    <Compile Include="..\Terminal.Gui.Stanza\IR\ViewDeclaration.cs" Link="IR\ViewDeclaration.cs" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
-  </PropertyGroup>
-
-  <Target Name="GetDependencyTargetPaths">
-    <ItemGroup>
-      <TargetPathWithTargetPlatformMoniker Include="$(TargetDir)Terminal.Gui.Stanza.Abstractions.dll" IncludeRuntimeDependency="false" />
-    </ItemGroup>
-  </Target>
 
 </Project>

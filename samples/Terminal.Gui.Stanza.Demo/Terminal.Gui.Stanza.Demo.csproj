@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Terminal.Gui.Stanza\Terminal.Gui.Stanza.csproj" />
-    <ProjectReference Include="..\..\src\Terminal.Gui.Stanza.Abstractions\Terminal.Gui.Stanza.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Terminal.Gui.Stanza.Generators\Terminal.Gui.Stanza.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

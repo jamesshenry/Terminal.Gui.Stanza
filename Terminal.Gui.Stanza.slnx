@@ -2,7 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/Terminal.Gui.Stanza/Terminal.Gui.Stanza.csproj" />
     <Project Path="src/Terminal.Gui.Stanza.Tests/Terminal.Gui.Stanza.Tests.csproj" />
-    <Project Path="src/Terminal.Gui.Stanza.Abstractions/Terminal.Gui.Stanza.Abstractions.csproj" />
     <Project Path="src/Terminal.Gui.Stanza.Generators/Terminal.Gui.Stanza.Generators.csproj" />
     <Project Path="src/Terminal.Gui.Stanza.Generators.Tests/Terminal.Gui.Stanza.Generators.Tests.csproj" />
   </Folder>

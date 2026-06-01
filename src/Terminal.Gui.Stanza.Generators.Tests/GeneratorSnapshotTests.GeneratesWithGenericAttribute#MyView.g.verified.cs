@@ -12,9 +12,6 @@ partial class MyView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.MyViewModel
 {
     public MyView() : base()
     {
-        this.Width = Dim.Auto();
-        this.Height = Dim.Auto();
-        this.CanFocus = true;
     }
 
     public MyView(TestNamespace.MyViewModel viewModel) : this()
@@ -67,5 +64,9 @@ partial class MyView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.MyViewModel
 
         // 4. Add to view hierarchy
         if (!this.SubViews.Contains(MyLabel)) this.Add(MyLabel);
+
+        OnInitialized();
     }
+
+    partial void OnInitialized();
 }

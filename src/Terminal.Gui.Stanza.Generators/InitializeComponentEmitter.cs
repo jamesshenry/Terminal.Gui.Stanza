@@ -153,7 +153,11 @@ internal class InitializeComponentEmitter
             sb.AppendLine($"        if (!this.SubViews.Contains({viewName})) this.Add({viewName});");
         }
 
+        sb.AppendLine();
+        sb.AppendLine("        OnInitialized();");
         sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    partial void OnInitialized();");
         sb.AppendLine("}");
 
         return sb.ToString();

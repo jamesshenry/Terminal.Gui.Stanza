@@ -7,5 +7,6 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Terminal.Gui.Stanza.Demo/Terminal.Gui.Stanza.Demo.csproj" />
+    <Project Path="samples/Terminal.Gui.Stanza.ClusterExplorer/Terminal.Gui.Stanza.ClusterExplorer.csproj" />
   </Folder>
 </Solution>

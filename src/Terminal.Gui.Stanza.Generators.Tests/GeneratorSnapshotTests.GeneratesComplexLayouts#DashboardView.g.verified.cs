@@ -12,9 +12,6 @@ partial class DashboardView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.Dash
 {
     public DashboardView() : base()
     {
-        this.Width = Dim.Auto();
-        this.Height = Dim.Auto();
-        this.CanFocus = true;
     }
 
     public DashboardView(TestNamespace.DashboardViewModel viewModel) : this()
@@ -74,5 +71,9 @@ partial class DashboardView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.Dash
         if (!this.SubViews.Contains(FooterLabel)) this.Add(FooterLabel);
         if (!this.SubViews.Contains(LeftPanel)) this.Add(LeftPanel);
         if (!this.SubViews.Contains(RightPanel)) this.Add(RightPanel);
+
+        OnInitialized();
     }
+
+    partial void OnInitialized();
 }

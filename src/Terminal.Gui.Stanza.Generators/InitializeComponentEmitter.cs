@@ -42,11 +42,11 @@ internal class InitializeComponentEmitter
                 sb.AppendLine();
             }
 
-            sb.AppendLine($"    private {viewDecl.ViewModelType}? _viewModel;");
+            // sb.AppendLine($"    private {viewDecl.ViewModelType}? _viewModel;");
             sb.AppendLine($"    public {viewDecl.ViewModelType}? ViewModel {{");
-            sb.AppendLine("        get => _viewModel;");
+            sb.AppendLine("        get => field;");
             sb.AppendLine("        set {");
-            sb.AppendLine("            _viewModel = value;");
+            sb.AppendLine("            field = value;");
             sb.AppendLine("            if (value != null) InitializeComponent();");
             sb.AppendLine("        }");
             sb.AppendLine("    }");

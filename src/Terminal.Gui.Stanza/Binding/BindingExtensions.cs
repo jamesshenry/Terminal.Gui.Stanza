@@ -1,11 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Terminal.Gui;
-using Terminal.Gui.Stanza.Abstractions;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
+using System.Windows.Input;
 
 namespace Terminal.Gui.Stanza.Binding;
 
@@ -28,7 +25,7 @@ public static class BindingExtensions
     /// Works for strings, bools, ints, or custom objects.
     /// </summary>
     public static IDisposable Bind<T>(
-        this ObservableObject viewModel,
+        this INotifyPropertyChanged viewModel,
         Func<T> propertyExpression,
         Action<T> updateUi,
         [CallerArgumentExpression(nameof(propertyExpression))] string? expression = null
@@ -42,7 +39,7 @@ public static class BindingExtensions
     }
 
     public static IDisposable Bind<T>(
-        this ObservableObject viewModel,
+        this INotifyPropertyChanged viewModel,
         string propertyName,
         Func<T> propertyExpression,
         Action<T> updateUi
@@ -65,7 +62,7 @@ public static class BindingExtensions
     }
 
     public static IDisposable BindTextTo(
-        this ObservableObject viewModel,
+        this INotifyPropertyChanged viewModel,
         View target,
         Func<string> getter,
         Action<string>? setter = null,
@@ -77,7 +74,7 @@ public static class BindingExtensions
     }
 
     public static IDisposable BindTextTo(
-        this ObservableObject viewModel,
+        this INotifyPropertyChanged viewModel,
         View target,
         string propertyName,
         Func<string> getter,
@@ -114,7 +111,7 @@ public static class BindingExtensions
                     try
                     {
                         StanzaConfig.Logger?.Log($"[BindText] TextField Value -> VM update: '{textField.Value}'");
-                        setter(textField.Value);
+                        setter(textField.Value ?? string.Empty);
                     }
                     finally
                     {
@@ -181,7 +178,7 @@ public static class BindingExtensions
     }
 
     public static IDisposable BindCheckedTo(
-        this ObservableObject viewModel,
+        this INotifyPropertyChanged viewModel,
         CheckBox checkBox,
         Func<bool> getter,
         Action<bool> setter,
@@ -193,7 +190,7 @@ public static class BindingExtensions
     }
 
     public static IDisposable BindCheckedTo(
-        this ObservableObject viewModel,
+        this INotifyPropertyChanged viewModel,
         CheckBox checkBox,
         string propertyName,
         Func<bool> getter,
@@ -245,8 +242,8 @@ public static class BindingExtensions
     }
 
     public static IDisposable BindCommandTo(
-        this ObservableObject viewModel,
-        IRelayCommand command,
+        this INotifyPropertyChanged viewModel,
+        ICommand command,
         Button button
     )
     {
@@ -281,7 +278,7 @@ public static class BindingExtensions
         string propertyName,
         Func<TViewModel, string> getter,
         Action<TViewModel, string>? setter = null
-    ) where TViewModel : ObservableObject
+    ) where TViewModel : INotifyPropertyChanged
     {
         return viewModel.BindTextTo(target, propertyName, () => getter(viewModel), setter != null ? val => setter(viewModel, val) : null);
     }
@@ -295,7 +292,7 @@ public static class BindingExtensions
         string propertyName,
         Func<TViewModel, bool> getter,
         Action<TViewModel, bool>? setter = null
-    ) where TViewModel : ObservableObject
+    ) where TViewModel : INotifyPropertyChanged
     {
         return viewModel.BindCheckedTo(checkBox, propertyName, () => getter(viewModel), val => setter?.Invoke(viewModel, val));
     }
@@ -306,8 +303,8 @@ public static class BindingExtensions
     public static IDisposable ApplyBindCommand<TViewModel>(
         this Button button,
         TViewModel viewModel,
-        IRelayCommand command
-    ) where TViewModel : ObservableObject
+        ICommand command
+    ) where TViewModel : INotifyPropertyChanged
     {
         return viewModel.BindCommandTo(command, button);
     }
@@ -320,7 +317,7 @@ public static class BindingExtensions
         TViewModel viewModel,
         string propertyName,
         Func<TViewModel, bool> getter
-    ) where TViewModel : ObservableObject
+    ) where TViewModel : INotifyPropertyChanged
     {
         return viewModel.Bind(
             propertyName,
@@ -337,7 +334,7 @@ public static class BindingExtensions
         TViewModel viewModel,
         string propertyName,
         Func<TViewModel, bool> getter
-    ) where TViewModel : ObservableObject
+    ) where TViewModel : INotifyPropertyChanged
     {
         return viewModel.Bind(
             propertyName,

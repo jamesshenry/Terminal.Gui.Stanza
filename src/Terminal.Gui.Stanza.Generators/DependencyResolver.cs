@@ -57,8 +57,15 @@ internal class DependencyResolver
 
         if (result.Count != viewNamesList.Count)
         {
-            // Circular dependency detected
-            // For MVP, we just return what we have or handle it elsewhere
+            // Circular dependency detected or incomplete sort.
+            // Append missing views to avoid silent drop from instantiation.
+            foreach (var view in viewNamesList)
+            {
+                if (!result.Contains(view))
+                {
+                    result.Add(view);
+                }
+            }
         }
 
         return result;

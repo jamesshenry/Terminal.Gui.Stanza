@@ -1,5 +1,6 @@
 namespace Terminal.Gui.Stanza;
 
+using System.ComponentModel;
 using Terminal.Gui;
 using Terminal.Gui.Stanza.Binding;
 using Terminal.Gui.ViewBase;
@@ -9,7 +10,7 @@ using Terminal.Gui.ViewBase;
 /// Base class for declarative Stanza views. Provides binding context and enforces generated code pattern.
 /// </summary>
 public abstract class BindableView<TViewModel> : View
-    where TViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+    where TViewModel : INotifyPropertyChanged
 {
     protected BindingContext BindingContext { get; private set; } = new();
 

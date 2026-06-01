@@ -1,7 +1,7 @@
 ﻿namespace Terminal.Gui.Stanza.Abstractions;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-public sealed class TuiViewAttribute : Attribute
+public class TuiViewAttribute : Attribute
 {
     /// <summary>
     /// Title of the view (e.g., for windows/frames).
@@ -19,4 +19,10 @@ public sealed class TuiViewAttribute : Attribute
     /// Default: true.
     /// </summary>
     public bool GenerateInitializeComponent { get; set; } = true;
+}
+
+[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+public sealed class TuiViewAttribute<TViewModel> : TuiViewAttribute
+    where TViewModel : System.ComponentModel.INotifyPropertyChanged
+{
 }

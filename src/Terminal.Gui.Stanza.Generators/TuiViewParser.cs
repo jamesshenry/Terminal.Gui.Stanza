@@ -12,10 +12,12 @@ namespace Terminal.Gui.Stanza.Generators;
 internal class TuiViewParser
 {
     private readonly INamedTypeSymbol _tuiViewAttributeSymbol;
+    private readonly INamedTypeSymbol? _genericTuiViewAttributeSymbol;
 
-    public TuiViewParser(INamedTypeSymbol tuiViewAttributeSymbol)
+    public TuiViewParser(INamedTypeSymbol tuiViewAttributeSymbol, INamedTypeSymbol? genericTuiViewAttributeSymbol)
     {
         _tuiViewAttributeSymbol = tuiViewAttributeSymbol;
+        _genericTuiViewAttributeSymbol = genericTuiViewAttributeSymbol;
     }
 
     public ViewDeclaration? Parse(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
@@ -24,27 +26,41 @@ internal class TuiViewParser
         if (classSymbol == null) return null;
 
         var tuiViewAttr = classSymbol.GetAttributes()
-            .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol));
+            .FirstOrDefault(a => 
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol) ||
+                (_genericTuiViewAttributeSymbol != null && a.AttributeClass != null && SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, _genericTuiViewAttributeSymbol)));
 
         if (tuiViewAttr == null) return null;
 
-        // 1. Resolve TViewModel from ctor parameters first (Constructor Injection)
         INamedTypeSymbol? vmSymbol = null;
-        foreach (var ctorSymbol in classSymbol.InstanceConstructors)
+
+        // 1. Resolve TViewModel from generic attribute type argument first
+        if (tuiViewAttr.AttributeClass != null && 
+            tuiViewAttr.AttributeClass.IsGenericType && 
+            tuiViewAttr.AttributeClass.TypeArguments.Length > 0)
         {
-            foreach (var param in ctorSymbol.Parameters)
-            {
-                var typeSymbol = param.Type as INamedTypeSymbol;
-                if (typeSymbol != null && InheritsFromObservableObject(typeSymbol))
-                {
-                    vmSymbol = typeSymbol;
-                    break;
-                }
-            }
-            if (vmSymbol != null) break;
+            vmSymbol = tuiViewAttr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
         }
 
-        // 2. Fall back to generic base class argument if not found in ctor
+        // 2. Fall back to ctor parameters first (Constructor Injection)
+        if (vmSymbol == null)
+        {
+            foreach (var ctorSymbol in classSymbol.InstanceConstructors)
+            {
+                foreach (var param in ctorSymbol.Parameters)
+                {
+                    var typeSymbol = param.Type as INamedTypeSymbol;
+                    if (typeSymbol != null && InheritsFromObservableObject(typeSymbol))
+                    {
+                        vmSymbol = typeSymbol;
+                        break;
+                    }
+                }
+                if (vmSymbol != null) break;
+            }
+        }
+
+        // 3. Fall back to generic base class argument if not found in ctor
         if (vmSymbol == null)
         {
             var baseType = classSymbol.BaseType;
@@ -53,6 +69,8 @@ internal class TuiViewParser
                 vmSymbol = baseType.TypeArguments[0] as INamedTypeSymbol;
             }
         }
+
+        bool generateConstructors = vmSymbol != null && !classSymbol.InstanceConstructors.Any(c => !c.IsImplicitlyDeclared);
 
         var assignments = new List<PropertyAssignment>();
         var bindings = new List<BindingInfo>();
@@ -80,7 +98,8 @@ internal class TuiViewParser
             assignments,
             bindings,
             constraints,
-            vmSymbol?.ToDisplayString()
+            vmSymbol?.ToDisplayString(),
+            generateConstructors
         );
     }
 

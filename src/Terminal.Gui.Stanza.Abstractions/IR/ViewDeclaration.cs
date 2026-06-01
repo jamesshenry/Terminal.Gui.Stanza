@@ -9,5 +9,6 @@ public record ViewDeclaration(
     IEnumerable<PropertyAssignment> PropertyAssignments,
     IEnumerable<BindingInfo> Bindings,
     IEnumerable<LayoutConstraint> LayoutConstraints,
-    string? ViewModelType = null
+    string? ViewModelType = null,
+    bool GenerateConstructors = false
 );

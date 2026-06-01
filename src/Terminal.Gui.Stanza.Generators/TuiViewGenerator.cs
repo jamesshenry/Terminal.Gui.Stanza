@@ -25,7 +25,9 @@ public class TuiViewGenerator : IIncrementalGenerator
             var tuiViewAttributeSymbol = compilation.GetTypeByMetadataName("Terminal.Gui.Stanza.Abstractions.TuiViewAttribute");
             if (tuiViewAttributeSymbol == null) return;
 
-            var parser = new TuiViewParser(tuiViewAttributeSymbol);
+            var genericTuiViewAttributeSymbol = compilation.GetTypeByMetadataName("Terminal.Gui.Stanza.Abstractions.TuiViewAttribute`1");
+
+            var parser = new TuiViewParser(tuiViewAttributeSymbol, genericTuiViewAttributeSymbol);
             var resolver = new DependencyResolver();
             var emitter = new InitializeComponentEmitter();
 

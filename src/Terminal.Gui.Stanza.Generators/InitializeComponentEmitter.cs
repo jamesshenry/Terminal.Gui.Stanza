@@ -21,12 +21,20 @@ internal class InitializeComponentEmitter
         if (!string.IsNullOrEmpty(viewDecl.ViewModelType))
         {
             sb.AppendLine($"partial class {viewDecl.ClassName} : Terminal.Gui.Stanza.BindableView<{viewDecl.ViewModelType}>");
+            sb.AppendLine("{");
+            if (viewDecl.GenerateConstructors)
+            {
+                sb.AppendLine($"    public {viewDecl.ClassName}() : base() {{ }}");
+                sb.AppendLine();
+                sb.AppendLine($"    public {viewDecl.ClassName}({viewDecl.ViewModelType} viewModel) : base(viewModel) {{ }}");
+                sb.AppendLine();
+            }
         }
         else
         {
             sb.AppendLine($"partial class {viewDecl.ClassName}");
+            sb.AppendLine("{");
         }
-        sb.AppendLine("{");
         sb.AppendLine("    protected override void InitializeComponent()");
         sb.AppendLine("    {");
 

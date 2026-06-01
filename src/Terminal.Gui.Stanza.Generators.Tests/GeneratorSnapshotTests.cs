@@ -34,6 +34,31 @@ public partial class MyView : BindableView<MyViewModel>
 
         return TestHelper.Verify(source);
     }
+
+    [Test]
+    public Task GeneratesWithGenericAttribute()
+    {
+        var source = """
+using Terminal.Gui.Stanza.Abstractions;
+using Terminal.Gui.Stanza;
+using Terminal.Gui.Views;
+
+namespace TestNamespace;
+
+public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+{
+    public string Name { get; set; }
+}
+
+[TuiView<MyViewModel>]
+public partial class MyView
+{
+    public Label MyLabel { get; set; } = new() { Text = "Hello" };
+}
+""";
+
+        return TestHelper.Verify(source);
+    }
 }
 
 public static class TestHelper

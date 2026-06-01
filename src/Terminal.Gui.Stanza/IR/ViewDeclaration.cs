@@ -12,5 +12,6 @@ public record ViewDeclaration(
     string? ViewModelType = null,
     bool GenerateParameterlessConstructor = false,
     bool GenerateViewModelConstructor = false,
-    IEnumerable<string>? SubviewsWithViewModel = null
+    IEnumerable<string>? SubviewsWithViewModel = null,
+    string? Title = null
 );

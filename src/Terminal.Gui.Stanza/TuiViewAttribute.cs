@@ -4,21 +4,11 @@
 public class TuiViewAttribute : Attribute
 {
     /// <summary>
-    /// Title of the view (e.g., for windows/frames).
+    /// Static title assigned to the view in the generated parameterless constructor.
+    /// Applies to views that inherit from <see cref="Terminal.Gui.ViewBase.Window"/> or any
+    /// Terminal.Gui type that exposes a <c>Title</c> property.
     /// </summary>
     public string? Title { get; set; }
-
-    /// <summary>
-    /// If true, the generator will allow relative layout references (e.g., Y = Pos.Bottom(other)).
-    /// Default: true.
-    /// </summary>
-    public bool AllowRelativeRefs { get; set; } = true;
-
-    /// <summary>
-    /// If true, the generator will emit a partial InitializeComponent() method.
-    /// Default: true.
-    /// </summary>
-    public bool GenerateInitializeComponent { get; set; } = true;
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]

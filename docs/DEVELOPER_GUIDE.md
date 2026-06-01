@@ -454,11 +454,11 @@ dotnet test --filter GeneratorSnapshotTests -- --accept
 | [TuiViewParser.cs](../src/Terminal.Gui.Stanza.Generators/TuiViewParser.cs) | Extracts [TuiView] attributes → IR models |
 | [DependencyResolver.cs](../src/Terminal.Gui.Stanza.Generators/DependencyResolver.cs) | Topologically sorts views by layout constraints |
 | [InitializeComponentEmitter.cs](../src/Terminal.Gui.Stanza.Generators/InitializeComponentEmitter.cs) | Generates C# code for InitializeComponent() |
-| [ViewDeclaration.cs](ViewDeclaration.cs) | IR model for a decorated view class |
-| [LayoutConstraint.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/LayoutConstraint.cs) | IR model for relative layout references |
-| [PropertyAssignment.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/PropertyAssignment.cs) | IR model for property initializers |
-| [BindingInfo.cs](../src/Terminal.Gui.Stanza.Abstractions/IR/BindingInfo.cs) | IR model for MVVM data bindings |
-| [TuiViewAttribute.cs](../src/Terminal.Gui.Stanza.Abstractions/TuiViewAttribute.cs) | Marker attribute for classes to generate |
+| [ViewDeclaration.cs](../src/Terminal.Gui.Stanza/IR/ViewDeclaration.cs) | IR model for a decorated view class |
+| [LayoutConstraint.cs](../src/Terminal.Gui.Stanza/IR/LayoutConstraint.cs) | IR model for relative layout references |
+| [PropertyAssignment.cs](../src/Terminal.Gui.Stanza/IR/PropertyAssignment.cs) | IR model for property initializers |
+| [BindingInfo.cs](../src/Terminal.Gui.Stanza/IR/BindingInfo.cs) | IR model for MVVM data bindings |
+| [TuiViewAttribute.cs](../src/Terminal.Gui.Stanza/TuiViewAttribute.cs) | Marker attribute and reserved metadata contract for generated views |
 | [GeneratorSnapshotTests.cs](../src/Terminal.Gui.Stanza.Generators.Tests/GeneratorSnapshotTests.cs) | Snapshot tests with verified outputs |
 
 ---
@@ -470,8 +470,11 @@ For design rationale, see the ADR files in [docs/adr/](docs/adr):
 - [0001-source-generator-architecture.md](docs/adr/0001-source-generator-architecture.md) — Project separation and IR pattern
 - [0002-mvvm-binding-logic.md](docs/adr/0002-mvvm-binding-logic.md) — Binding lifecycle management
 - [0003-hybrid-declaration-paradigm.md](docs/adr/0003-hybrid-declaration-paradigm.md) — Combining attributes with C# 14 extensions
-- [0004-centralized-style-system.md.md](docs/adr/0004-centralized-style-system.md.md) — Compile-time style splatting
+- [0004-centralized-style-system.md](docs/adr/0004-centralized-style-system.md) — Deferred centralized style system
 - [0005-dependency-graph-initialization.md](docs/adr/0005-dependency-graph-initialization.md) — View instantiation ordering
+- [0006-view-model-discovery-and-lifecycle.md](docs/adr/0006-view-model-discovery-and-lifecycle.md) — View-model inference, generated constructors, and lifecycle semantics
+- [0007-nested-subview-composition.md](docs/adr/0007-nested-subview-composition.md) — Nested view composition and `ViewModel` propagation
+- [0008-generator-validation-and-diagnostics.md](docs/adr/0008-generator-validation-and-diagnostics.md) — Test strategy and current diagnostic policy
 
 ---
 

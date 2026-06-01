@@ -18,9 +18,9 @@ partial class MyView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamespace.MyV
 
     private TestNamespace.MyViewModel? _viewModel;
     public TestNamespace.MyViewModel? ViewModel {
-        get => _viewModel;
+        get => field;
         set {
-            _viewModel = value;
+            field = value;
             if (value != null) InitializeComponent();
         }
     }

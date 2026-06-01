@@ -23,9 +23,9 @@ partial class DashboardView : Terminal.Gui.Stanza.Binding.IStanzaView<TestNamesp
 
     private TestNamespace.DashboardViewModel? _viewModel;
     public TestNamespace.DashboardViewModel? ViewModel {
-        get => _viewModel;
+        get => field;
         set {
-            _viewModel = value;
+            field = value;
             if (value != null) InitializeComponent();
         }
     }

@@ -28,6 +28,8 @@ internal class TuiViewParser
         var vmSymbol = GetViewModelSymbol(classSymbol);
         if (vmSymbol == null) return null;
 
+        var title = GetTitle(classSymbol);
+
         bool hasParameterlessCtor = classSymbol.InstanceConstructors
             .Any(c => c.Parameters.Length == 0 && !c.IsImplicitlyDeclared);
 
@@ -94,7 +96,8 @@ internal class TuiViewParser
             vmSymbol?.ToDisplayString(),
             generateParameterlessCtor,
             generateViewModelCtor,
-            subviewsWithViewModel
+            subviewsWithViewModel,
+            title
         );
     }
 
@@ -123,6 +126,21 @@ internal class TuiViewParser
             current = current.BaseType;
         }
         return false;
+    }
+
+    private string? GetTitle(INamedTypeSymbol classSymbol)
+    {
+        var tuiViewAttr = classSymbol.GetAttributes()
+            .FirstOrDefault(a =>
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol) ||
+                (_genericTuiViewAttributeSymbol != null && a.AttributeClass != null && SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, _genericTuiViewAttributeSymbol)));
+
+        if (tuiViewAttr == null) return null;
+
+        var namedArg = tuiViewAttr.NamedArguments
+            .FirstOrDefault(a => a.Key == "Title");
+
+        return namedArg.Key == "Title" ? namedArg.Value.Value as string : null;
     }
 
     private INamedTypeSymbol? GetViewModelSymbol(INamedTypeSymbol classSymbol)

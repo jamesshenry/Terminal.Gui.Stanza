@@ -7,14 +7,14 @@ A declarative, attribute-based UI engine for **Terminal.Gui v2**, targeting .NET
 - Build: `dotnet build Terminal.Gui.Stanza.slnx`
 - Test: `dotnet test Terminal.Gui.Stanza.slnx`
 - Single test: `dotnet test Terminal.Gui.Stanza.slnx --filter "FullyQualifiedName~TestName"`
-- Snapshot Testing: Uses `Verify.SourceGenerators` to verify emitted code against `tests/Terminal.Gui.Stanza.Generators.Tests/snapshots/`
+- Snapshot Testing: Uses `Verify.SourceGenerators` in `src/Terminal.Gui.Stanza.Generators.Tests/`
 
 ## Project Structure
 
-- `src/Terminal.Gui.Stanza.Abstractions/` — Marker attributes (`[TuiView]`, `[TuiStyle]`), Layout Enums (`Anchor`), and the IR (Intermediate Representation) schemas. **Zero external dependencies.**
-- `src/Terminal.Gui.Stanza.Generators/` — The Roslyn `IIncrementalGenerator`. Contains the dependency graph logic, IR Parser, and C# Emitter.
-- `src/Terminal.Gui.Stanza/` — Core framework library. Contains `BindingContext`, `BindableView<T>`, and the **C# 14 Extension Blocks** providing the fluent layout and binding API for `Terminal.Gui.View`.
-- `tests/Terminal.Gui.Stanza.Generators.Tests/` — Unit tests for the generator logic using snapshot verification.
+- `src/Terminal.Gui.Stanza/` — Consumer-facing runtime and authoring surface. Contains `[TuiView]`, IR records, `BindingContext`, binding helpers, and layout extension members.
+- `src/Terminal.Gui.Stanza.Generators/` — The Roslyn `IIncrementalGenerator`. Contains the parser, dependency resolver, and C# emitter.
+- `src/Terminal.Gui.Stanza.Generators.Tests/` — Snapshot-driven generator tests that also recompile generated output.
+- `src/Terminal.Gui.Stanza.Tests/` — End-to-end runtime tests for generated binding behavior.
 
 ## The Stanza Paradigm
 
@@ -22,7 +22,7 @@ Stanza eliminates "Glue Code" by treating UI definitions as a **Schema** rather 
 
 1. **The Reference Problem**: C# field/property initializers cannot reference other instance members (e.g., `Y = Pos.Bottom(lbl)` fails). Stanza’s generator intercepts these declarations and moves them into an ordered `InitializeComponent` method where relative references are legally allowed.
 2. **The Binding Gap**: Terminal.Gui lacks a native dependency-property system. Stanza provides synthetic extension properties (e.g., `BindText = nameof(vm.Data)`) that the generator wires into a leak-proof MVVM lifecycle.
-3. **The Design System**: Through `[TuiStyle]`, users define UI "stanzas" (bundles of borders, colors, padding) once. The generator "splats" these settings at compile-time, ensuring zero runtime performance overhead.
+3. **The Deferred Design System**: Centralized style splatting is still planned, but not implemented in the current repository. Styling remains explicit in authored view initializers.
 
 ## Key Namespaces
 
@@ -36,18 +36,21 @@ Located in `docs/adr/`:
 
 - `0001-source-generator-architecture.md` — Project separation and IR pattern.
 - `0002-mvvm-binding-logic.md` — `BindingContext` and lifecycle management.
-- `0003-hybrid-declaration-paradigm.md` — Combining Attributes with C# 14 Extensions.
-- `0004-centralized-style-system.md` — Compile-time "Splatting" of UI styles.
+- `0003-hybrid-declaration-paradigm.md` — Combining attributes with C# extension members.
+- `0004-centralized-style-system.md` — Deferred centralized style system.
 - `0005-dependency-graph-initialization.md` — Automated view instantiation ordering based on layout relationships.
+- `0006-view-model-discovery-and-lifecycle.md` — View-model inference and generated lifecycle semantics.
+- `0007-nested-subview-composition.md` — Nested view composition and shared `ViewModel` propagation.
+- `0008-generator-validation-and-diagnostics.md` — Test strategy and current diagnostics policy.
 
-# Coding Guidelines
+## Coding Guidelines
 
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 - State your assumptions explicitly.
-- If multiple interpretations of a `[TuiStyle]` override exist, document the precedence (local property assignment always wins over style property).
+- If a future style system is added, document precedence explicitly (local property assignment should win over style-provided values).
 
 ## 2. Simplicity First
 

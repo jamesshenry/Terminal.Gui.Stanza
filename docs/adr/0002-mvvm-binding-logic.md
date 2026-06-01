@@ -1,33 +1,44 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # ADR 2: MVVM Binding Logic and Lifecycle Management
 
 ## Context
 
-Terminal.Gui does not have a data-binding system akin to WPF or Avalonia instead using a model more similar to Winforms. This requires extensive wiring of events which are boiler-plate heavy and vulnerable to memory leaks if not disposed of properly.
+Terminal.Gui does not provide a first-class dependency-property or binding system. Without generator support, even simple MVVM scenarios require repeated `PropertyChanged` subscriptions, event handlers for user edits, and explicit cleanup to avoid leaking handlers.
 
-## Decisions
+The original design assumed a handwritten `BindableView<T>` base class. The current implementation instead generates the minimum view-model plumbing directly into each annotated partial view so that user code can inherit from any appropriate Terminal.Gui base type.
 
-We will implement a centralized pattern of Binding:
+## Decision
 
-1. BindingContext: A container that tracks `IDisposable` bindings.
-2. BindingExtensions: Fluent wrappers for `ObservableObject` that return `IDisposable` handlers for VM-to-UI sync.
-3. **Generator-Driven Wiring**:
-   - The generator will look for `[Bind]` attributes.
-   - It will automatically emit calls to `BindingExtensions` inside the `InitializeComponent` method.
-   - All generated bindings will be registered to the view's `BindingContext`.
-4. **Dispose Pattern**: The base `BindableView<T>` will dispose of the `BindingContext` in its own `Dispose` method, ensuring zero memory leaks.
+Adopt a generated mixin model for MVVM support:
+
+1. `BindingContext` owns the lifetime of generated subscriptions and disposes them as a group.
+2. `BindingExtensions` provides the reusable runtime primitives:
+   - generic one-way and two-way binding helpers
+   - view-specific adapters such as `ApplyBindText`, `ApplyBindChecked`, `ApplyBindCommand`, `ApplyBindVisible`, and `ApplyBindEnabled`
+3. `[TuiView<TViewModel>]` or constructor/base-type inference tells the generator which view-model type to target.
+4. The generator emits these members into the partial view when a view-model type is present:
+   - `ViewModel` property
+   - `BindingContext` property
+   - convenience `Bind` helper for manual bindings
+   - `Dispose(bool)` override that disposes the binding context before delegating to the base class
+5. Generated bindings are emitted inside `InitializeComponent()` and registered through `BindingContext.AddBinding(...)`.
+
+Bindings use `nameof(...)` strings captured from synthetic properties such as `BindText = nameof(MyViewModel.Name)` so authoring remains refactoring-safe.
 
 ## Consequences
 
-### Pros
+### Positive
 
-- Type-safe bindings using `nameof`
-- automatic cleanup
-- compatibility with `CommunityToolkit.Mvvm`.
+- Views are free to inherit from `View`, `Window`, or other Terminal.Gui types rather than a Stanza-specific base class.
+- Binding logic is centralized in runtime helpers instead of being duplicated in emitted code for each control.
+- Cleanup is automatic as long as the generated partial view participates in normal disposal.
+- The approach works naturally with `INotifyPropertyChanged` view models, including `CommunityToolkit.Mvvm` types.
 
-### Cons
+### Negative
 
-- Requires strict adherence to the `partial class` and `base.Dispose()` patterns.
+- Generated `InitializeComponent()` currently runs whenever `ViewModel` is assigned a non-null value, so the implementation assumes a view instance is initialized once rather than repeatedly rebound to different view models.
+- The generated binding lifecycle is implicit, which makes debugging slightly more indirect than explicit handwritten event wiring.
+- Authoring still requires partial classes and the generator/runtime pair to remain compatible.

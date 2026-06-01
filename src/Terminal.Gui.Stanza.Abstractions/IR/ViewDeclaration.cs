@@ -10,5 +10,6 @@ public record ViewDeclaration(
     IEnumerable<BindingInfo> Bindings,
     IEnumerable<LayoutConstraint> LayoutConstraints,
     string? ViewModelType = null,
-    bool GenerateConstructors = false
+    bool GenerateParameterlessConstructor = false,
+    bool GenerateViewModelConstructor = false
 );

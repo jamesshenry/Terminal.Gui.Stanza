@@ -17,6 +17,7 @@ public class GeneratorSnapshotTests
 using Terminal.Gui.Stanza.Abstractions;
 using Terminal.Gui.Stanza;
 using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
 
@@ -26,7 +27,7 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
 }
 
 [TuiView]
-public partial class MyView : BindableView<MyViewModel>
+public partial class MyView : View
 {
     public Label MyLabel { get; set; } = new() { Text = "Hello" };
 }
@@ -42,6 +43,7 @@ public partial class MyView : BindableView<MyViewModel>
 using Terminal.Gui.Stanza.Abstractions;
 using Terminal.Gui.Stanza;
 using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
 
@@ -51,7 +53,7 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
 }
 
 [TuiView<MyViewModel>]
-public partial class MyView
+public partial class MyView : View
 {
     public Label MyLabel { get; set; } = new() { Text = "Hello" };
 }
@@ -69,9 +71,9 @@ public static class TestHelper
         _ = typeof(Terminal.Gui.Stanza.Abstractions.TuiViewAttribute).Assembly;
         _ = typeof(CommunityToolkit.Mvvm.ComponentModel.ObservableObject).Assembly;
         _ = typeof(Terminal.Gui.Views.Label).Assembly;
-        _ = typeof(Terminal.Gui.Stanza.BindableView<>).Assembly;
+        _ = typeof(Terminal.Gui.Stanza.Binding.IStanzaView<>).Assembly;
 
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
+        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview));
 
         // Dynamically get all currently loaded assemblies in the AppDomain to populate compilation references
         var references = AppDomain.CurrentDomain.GetAssemblies()
@@ -88,7 +90,9 @@ public static class TestHelper
 
         var generator = new TuiViewGenerator();
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new[] { generator.AsSourceGenerator() },
+            parseOptions: new CSharpParseOptions(LanguageVersion.Preview));
 
         driver = driver.RunGenerators(compilation);
 

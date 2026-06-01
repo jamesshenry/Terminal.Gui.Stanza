@@ -17,7 +17,6 @@ public partial class DemoViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowGreetings { get; set; } = true;
 
-
     public string GreetingMessage => $"Hello, {Name}! Welcome to Terminal.Gui.Stanza!";
 
     partial void OnNameChanged(string value)
@@ -33,13 +32,9 @@ public partial class DemoViewModel : ObservableObject
     }
 }
 
-[TuiView(Title = "Stanza MVVM Demo")]
-public partial class DemoView : BindableView<DemoViewModel>
+[TuiView<DemoViewModel>(Title = "Stanza MVVM Demo")]
+public partial class DemoView : View
 {
-    public DemoView(DemoViewModel viewModel) : base(viewModel)
-    {
-    }
-
     public Label TitleLabel { get; private set; } = new() 
     { 
         Text = "Terminal.Gui.Stanza Declarative Demo",
@@ -92,25 +87,36 @@ public partial class DemoView : BindableView<DemoViewModel>
     };
 }
 
-public class FileLogger : ILogger
+public class FileLogger : ILogger, System.IDisposable
 {
     private readonly string _path = "stanza_bindings.log";
-    private readonly object _lock = new();
+    private readonly System.Collections.Concurrent.BlockingCollection<string> _queue = new();
+    private readonly System.Threading.Tasks.Task _writeTask;
 
     public FileLogger()
     {
-        lock (_lock)
-        {
-            System.IO.File.WriteAllText(_path, $"=== Stanza Binding Log Started at {System.DateTime.Now} ===\n");
-        }
+        System.IO.File.WriteAllText(_path, $"=== Stanza Binding Log Started at {System.DateTime.Now} ===\n");
+        _writeTask = System.Threading.Tasks.Task.Run(ProcessQueue);
     }
 
     public void Log(string message)
     {
-        lock (_lock)
+        _queue.Add($"[{System.DateTime.Now:HH:mm:ss.fff}] {message}");
+    }
+
+    private void ProcessQueue()
+    {
+        foreach (var msg in _queue.GetConsumingEnumerable())
         {
-            System.IO.File.AppendAllText(_path, $"[{System.DateTime.Now:HH:mm:ss.fff}] {message}\n");
+            System.IO.File.AppendAllText(_path, msg + "\n");
         }
+    }
+
+    public void Dispose()
+    {
+        _queue.CompleteAdding();
+        _writeTask.Wait();
+        _queue.Dispose();
     }
 }
 
@@ -118,17 +124,21 @@ public static class Program
 {
     public static void Main()
     {
-        StanzaConfig.Logger = new FileLogger();
+        using var logger = new FileLogger();
+        StanzaConfig.Logger = logger;
 
         var app = Terminal.Gui.App.Application.Create();
         app.Init();
 
         var vm = new DemoViewModel();
         using var view = new DemoView(vm);
+        view.X = Pos.Center();
+        view.Y = Pos.Center();
         var window = new Window
         {
             Width = Dim.Fill(),
-            Height = Dim.Fill()
+            Height = Dim.Fill(),
+            
         };
         window.Add(view);
         app.Run(window);

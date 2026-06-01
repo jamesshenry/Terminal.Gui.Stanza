@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terminal.Gui;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Stanza;
 using Terminal.Gui.Stanza.Abstractions;
 using Terminal.Gui.Stanza.Binding;
@@ -14,8 +15,8 @@ public partial class SimpleViewModel : ObservableObject
     public partial string Name { get; set; } = "John";
 }
 
-[TuiView(Title = "Simple Form")]
-public partial class SimpleFormView : BindableView<SimpleViewModel>
+[TuiView<SimpleViewModel>(Title = "Simple Form")]
+public partial class SimpleFormView : View
 {
     public Label TitleLabel { get; private set; } = new() { Text = "Form" };
     public TextField NameInput { get; private set; } = new() { 

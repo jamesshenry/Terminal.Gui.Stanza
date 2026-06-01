@@ -70,7 +70,15 @@ internal class TuiViewParser
             }
         }
 
-        bool generateConstructors = vmSymbol != null && !classSymbol.InstanceConstructors.Any(c => !c.IsImplicitlyDeclared);
+        bool hasParameterlessCtor = classSymbol.InstanceConstructors
+            .Any(c => c.Parameters.Length == 0 && !c.IsImplicitlyDeclared);
+
+        bool hasViewModelCtor = classSymbol.InstanceConstructors
+            .Any(c => c.Parameters.Length == 1 && 
+                 SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, vmSymbol));
+
+        bool generateParameterlessCtor = vmSymbol != null && !hasParameterlessCtor;
+        bool generateViewModelCtor = vmSymbol != null && !hasViewModelCtor;
 
         var assignments = new List<PropertyAssignment>();
         var bindings = new List<BindingInfo>();
@@ -99,7 +107,8 @@ internal class TuiViewParser
             bindings,
             constraints,
             vmSymbol?.ToDisplayString(),
-            generateConstructors
+            generateParameterlessCtor,
+            generateViewModelCtor
         );
     }
 

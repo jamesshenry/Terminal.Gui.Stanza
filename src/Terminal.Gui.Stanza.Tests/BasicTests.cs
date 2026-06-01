@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Terminal.Gui.Input;
+using Terminal.Gui.Stanza.Abstractions;
 using Terminal.Gui.Stanza.Binding;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Terminal.Gui.Stanza.Tests;
@@ -112,4 +114,94 @@ public partial class BindingTests
         await Assert.That(uiValue1).IsEqualTo("Initial");
         await Assert.That(uiValue2).IsEqualTo("Initial");
     }
+
+    // [Test]
+    // public async Task Trait_View_HasDimensions_And_Instantiates_Immediately()
+    // {
+    //     // Arrange & Act
+    //     var view = new DemoView(); // No VM set yet
+
+    //     // Assert
+    //     await Assert.That(view.Width).IsEqualTo(Dim.Fill()); 
+    //     await Assert.That(view.TitleLabel).IsNotNull(); // InitializeComponent must have run
+    //     await Assert.That(view.SubViews.Contains(view.TitleLabel)).IsTrue();
+    // }
 }
+
+
+// [TuiView<DemoViewModel>(Title = "Stanza MVVM Demo")]
+// public partial class DemoView : View
+// {
+//     public Label TitleLabel { get; private set; } = new() 
+//     { 
+//         Text = "Terminal.Gui.Stanza Declarative Demo",
+//         Width = Dim.Auto(),
+//         Height = 1
+//     };
+
+//     public Label InstructionLabel { get; private set; } = new()
+//     {
+//         Text = "Type your name below to see dynamic bindings:",
+//         Width = Dim.Auto(),
+//         Height = 1,
+//         Below = nameof(TitleLabel)
+//     };
+
+//     public TextField NameInput { get; private set; } = new()
+//     {
+//         Width = 30,
+//         Height = 1,
+//         BindText = nameof(DemoViewModel.Name),
+//         Below = nameof(InstructionLabel),
+//         Enabled = true,
+//     };
+
+//     public CheckBox ShowGreetingsCheckbox { get; private set; } = new()
+//     {
+//         Text = "Show Greetings Banner",
+//         Width = Dim.Auto(),
+//         Height = 1,
+//         BindChecked = nameof(DemoViewModel.ShowGreetings),
+//         Below = nameof(NameInput)
+//     };
+
+//     public Label GreetingsLabel { get; private set; } = new()
+//     {
+//         Width = Dim.Auto(),
+//         Height = Dim.Auto(),
+//         BindText = nameof(DemoViewModel.GreetingMessage),
+//         BindVisible = nameof(DemoViewModel.ShowGreetings),
+//         Below = nameof(ShowGreetingsCheckbox)
+//     };
+
+//     public Button ResetButton { get; private set; } = new()
+//     {
+//         Text = "Reset Form",
+//         Width = Dim.Auto(),
+//         Height = Dim.Auto(),
+//         BindCommand = nameof(DemoViewModel.ResetCommand),
+//         Below = nameof(GreetingsLabel)
+//     };
+// }
+// public partial class DemoViewModel : ObservableObject
+// {
+//     [ObservableProperty]
+//     public partial string Name { get; set; } = "Stanza User";
+//     [ObservableProperty]
+//     public partial bool ShowGreetings { get; set; } = true;
+
+
+//     public string GreetingMessage => $"Hello, {Name}! Welcome to Terminal.Gui.Stanza!";
+
+//     partial void OnNameChanged(string value)
+//     {
+//         OnPropertyChanged(nameof(GreetingMessage));
+//     }
+
+//     [RelayCommand]
+//     private void Reset()
+//     {
+//         Name = "Stanza User";
+//         ShowGreetings = true;
+//     }
+// }

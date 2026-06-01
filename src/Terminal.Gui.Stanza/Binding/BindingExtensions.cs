@@ -18,7 +18,69 @@ public static class BindingExtensions
         public string BindEnabled { get => string.Empty; set { } }
     }
 
-    #region Standard Extension Methods (Pre-C# 14 style or specifically for ObservableObject)
+    #region Standard Extension Methods (VM -> UI / UI -> VM Master Methods)
+
+    public static IDisposable BindOneWay<TViewModel, TValue, TView>(
+        this TViewModel viewModel,
+        string propertyName,
+        TView view,
+        System.Func<TViewModel, TValue> vmGetter,
+        System.Action<TView, TValue> uiSetter
+    ) where TViewModel : INotifyPropertyChanged
+    {
+        return viewModel.Bind(propertyName, () => vmGetter(viewModel), val => uiSetter(view, val));
+    }
+
+    public static IDisposable BindTwoWay<TViewModel, TValue, TView>(
+        this TViewModel viewModel,
+        string propertyName,
+        TView view,
+        System.Func<TViewModel, TValue> vmGetter,
+        System.Action<TViewModel, TValue> vmSetter,
+        System.Func<TView, TValue> uiGetter,
+        System.Action<TView, TValue> uiSetter,
+        System.Func<TView, System.Action, System.IDisposable> subscribeUiChange
+    ) where TViewModel : INotifyPropertyChanged
+    {
+        bool updating = false;
+
+        var vmToUi = viewModel.Bind(propertyName, () => vmGetter(viewModel), val =>
+        {
+            if (updating) return;
+            updating = true;
+            try
+            {
+                uiSetter(view, val);
+            }
+            finally
+            {
+                updating = false;
+            }
+        });
+
+        var uiSubscription = subscribeUiChange(view, () =>
+        {
+            if (updating) return;
+            var newVal = uiGetter(view);
+            if (System.Collections.Generic.EqualityComparer<TValue>.Default.Equals(newVal, vmGetter(viewModel))) return;
+
+            updating = true;
+            try
+            {
+                vmSetter(viewModel, newVal);
+            }
+            finally
+            {
+                updating = false;
+            }
+        });
+
+        return new DisposableAction(() =>
+        {
+            vmToUi.Dispose();
+            uiSubscription.Dispose();
+        });
+    }
 
     /// <summary>
     /// Generic One-Way Binding: VM -> UI
@@ -55,7 +117,6 @@ public static class BindingExtensions
             if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
             {
                 var newValue = propertyExpression();
-                StanzaConfig.Logger?.Log($"[Bind] Property '{propertyName}' changed on ViewModel. Updating UI to '{newValue}'.");
                 updateUi(newValue);
             }
         }
@@ -81,99 +142,95 @@ public static class BindingExtensions
         Action<string>? setter = null
     )
     {
-        bool updatingFromUi = false;
-
         if (target is TextField textField)
         {
-            var vmToUi = viewModel.Bind(
-                propertyName,
-                getter,
-                val =>
-                {
-                    if (updatingFromUi) return;
-
-                    if (textField.Value != val)
-                    {
-                        StanzaConfig.Logger?.Log($"[BindText] VM -> TextField Value update: '{val}'");
-                        textField.Value = val;
-                        textField.SetNeedsDraw();
-                    }
-                }
-            );
-
             if (setter != null)
             {
-                EventHandler<Terminal.Gui.App.ValueChangedEventArgs<string>> onValueChanged = (s, e) =>
-                {
-                    if (textField.Value == getter()) return;
-
-                    updatingFromUi = true;
-                    try
+                return viewModel.BindTwoWay(
+                    propertyName,
+                    textField,
+                    _ => getter(),
+                    (_, val) => setter(val),
+                    tf => tf.Value ?? string.Empty,
+                    (tf, val) =>
                     {
-                        StanzaConfig.Logger?.Log($"[BindText] TextField Value -> VM update: '{textField.Value}'");
-                        setter(textField.Value ?? string.Empty);
-                    }
-                    finally
+                        if (tf.Value != val)
+                        {
+                            StanzaConfig.Logger?.Log($"[BindText] VM -> TextField Value update: '{val}'");
+                            tf.Value = val;
+                        }
+                    },
+                    (tf, onChange) =>
                     {
-                        updatingFromUi = false;
+                        EventHandler<Terminal.Gui.App.ValueChangedEventArgs<string>> handler = (s, e) =>
+                        {
+                            if (e.NewValue == e.OldValue) return;
+                            onChange();
+                        };
+                        tf.ValueChanged += handler;
+                        return new DisposableAction(() => tf.ValueChanged -= handler);
                     }
-                };
-                textField.ValueChanged += onValueChanged;
-
-                return new DisposableAction(() =>
-                {
-                    vmToUi.Dispose();
-                    textField.ValueChanged -= onValueChanged;
-                });
+                );
             }
-
-            return vmToUi;
+            else
+            {
+                return viewModel.BindOneWay(
+                    propertyName,
+                    textField,
+                    _ => getter(),
+                    (tf, val) =>
+                    {
+                        if (tf.Value != val)
+                        {
+                            StanzaConfig.Logger?.Log($"[BindText] VM -> TextField Value update (OneWay): '{val}'");
+                            tf.Value = val;
+                        }
+                    }
+                );
+            }
         }
         else
         {
-            var vmToUi = viewModel.Bind(
-                propertyName,
-                getter,
-                val =>
-                {
-                    if (updatingFromUi) return;
-
-                    if (target.Text != val)
-                    {
-                        StanzaConfig.Logger?.Log($"[BindText] VM -> UI text update on '{target.Id ?? target.GetType().Name}': '{val}'");
-                        target.Text = val;
-                        target.SetNeedsDraw();
-                    }
-                }
-            );
-
             if (setter != null)
             {
-                void OnTextChanged(object? s, EventArgs e)
-                {
-                    if (target.Text == getter()) return;
-
-                    updatingFromUi = true;
-                    try
+                return viewModel.BindTwoWay(
+                    propertyName,
+                    target,
+                    _ => getter(),
+                    (_, val) => setter(val),
+                    t => t.Text,
+                    (t, val) =>
                     {
-                        StanzaConfig.Logger?.Log($"[BindText] UI -> VM text update on '{target.Id ?? target.GetType().Name}': '{target.Text}'");
-                        setter(target.Text);
-                    }
-                    finally
+                        if (t.Text != val)
+                        {
+                            StanzaConfig.Logger?.Log($"[BindText] VM -> UI text update on '{t.Id ?? t.GetType().Name}': '{val}'");
+                            t.Text = val;
+                        }
+                    },
+                    (t, onChange) =>
                     {
-                        updatingFromUi = false;
+                        EventHandler handler = (s, e) => onChange();
+                        t.TextChanged += handler;
+                        return new DisposableAction(() => t.TextChanged -= handler);
                     }
-                }
-                target.TextChanged += OnTextChanged;
-
-                return new DisposableAction(() =>
-                {
-                    vmToUi.Dispose();
-                    target.TextChanged -= OnTextChanged;
-                });
+                );
             }
-
-            return vmToUi;
+            else
+            {
+                return viewModel.BindOneWay(
+                    propertyName,
+                    target,
+                    _ => getter(),
+                    (t, val) =>
+                    {
+                        if (t.Text != val)
+                        {
+                            StanzaConfig.Logger?.Log($"[BindText] VM -> UI text update on '{t.Id ?? t.GetType().Name}' (OneWay): '{val}'");
+                            t.Text = val;
+                        }
+                    }
+                );
+            }
         }
     }
 
@@ -197,48 +254,32 @@ public static class BindingExtensions
         Action<bool> setter
     )
     {
-        bool updatingFromUi = false;
-
-        var vmToUi = viewModel.Bind(
+        return viewModel.BindTwoWay(
             propertyName,
-            getter,
-            val =>
+            checkBox,
+            _ => getter(),
+            (_, val) => setter(val),
+            cb => cb.Value == CheckState.Checked,
+            (cb, val) =>
             {
-                if (updatingFromUi) return;
-
                 var newState = val ? CheckState.Checked : CheckState.UnChecked;
-                if (checkBox.Value != newState)
+                if (cb.Value != newState)
                 {
-                    StanzaConfig.Logger?.Log($"[BindChecked] VM -> UI checked update on '{checkBox.Id ?? checkBox.GetType().Name}': '{val}'");
-                    checkBox.Value = newState;
-                    checkBox.SetNeedsDraw();
+                    StanzaConfig.Logger?.Log($"[BindChecked] VM -> UI checked update on '{cb.Id ?? cb.GetType().Name}': '{val}'");
+                    cb.Value = newState;
                 }
+            },
+            (cb, onChange) =>
+            {
+                EventHandler<Terminal.Gui.App.ValueChangedEventArgs<CheckState>> handler = (s, e) =>
+                {
+                    if (e.NewValue == e.OldValue) return;
+                    onChange();
+                };
+                cb.ValueChanged += handler;
+                return new DisposableAction(() => cb.ValueChanged -= handler);
             }
         );
-
-        EventHandler<Terminal.Gui.App.ValueChangedEventArgs<CheckState>> onValueChanged = (s, e) =>
-        {
-            var isChecked = checkBox.Value == CheckState.Checked;
-            if (isChecked == getter()) return;
-
-            updatingFromUi = true;
-            try
-            {
-                StanzaConfig.Logger?.Log($"[BindChecked] UI -> VM checked update on '{checkBox.Id ?? checkBox.GetType().Name}': '{isChecked}'");
-                setter(isChecked);
-            }
-            finally
-            {
-                updatingFromUi = false;
-            }
-        };
-        checkBox.ValueChanged += onValueChanged;
-
-        return new DisposableAction(() =>
-        {
-            vmToUi.Dispose();
-            checkBox.ValueChanged -= onValueChanged;
-        });
     }
 
     public static IDisposable BindCommandTo(
@@ -322,7 +363,14 @@ public static class BindingExtensions
         return viewModel.Bind(
             propertyName,
             () => getter(viewModel),
-            val => view.Visible = val
+            val =>
+            {
+                if (view.Visible != val)
+                {
+                    StanzaConfig.Logger?.Log($"[BindVisible] VM -> UI visibility update on '{view.Id ?? view.GetType().Name}': '{val}'");
+                    view.Visible = val;
+                }
+            }
         );
     }
 
@@ -339,7 +387,14 @@ public static class BindingExtensions
         return viewModel.Bind(
             propertyName,
             () => getter(viewModel),
-            val => view.Enabled = val
+            val =>
+            {
+                if (view.Enabled != val)
+                {
+                    StanzaConfig.Logger?.Log($"[BindEnabled] VM -> UI enabled update on '{view.Id ?? view.GetType().Name}': '{val}'");
+                    view.Enabled = val;
+                }
+            }
         );
     }
 

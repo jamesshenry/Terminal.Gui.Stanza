@@ -2,5 +2,6 @@
   <PropertyGroup>
     <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts</ArtifactsPath>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 </Project>

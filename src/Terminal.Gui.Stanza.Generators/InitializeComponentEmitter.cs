@@ -28,9 +28,6 @@ internal class InitializeComponentEmitter
             {
                 sb.AppendLine($"    public {viewDecl.ClassName}() : base()");
                 sb.AppendLine("    {");
-                sb.AppendLine("        this.Width = Dim.Auto();");
-                sb.AppendLine("        this.Height = Dim.Auto();");
-                sb.AppendLine("        this.CanFocus = true;");
                 if (!string.IsNullOrEmpty(viewDecl.Title))
                     sb.AppendLine($"        this.Title = \"{viewDecl.Title}\";");
                 sb.AppendLine("    }");

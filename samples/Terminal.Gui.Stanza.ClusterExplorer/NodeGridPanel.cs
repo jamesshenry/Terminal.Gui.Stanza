@@ -1,0 +1,16 @@
+using Terminal.Gui.Stanza;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
+
+namespace Terminal.Gui.Stanza.ClusterExplorer;
+
+[TuiView<ClusterExplorerViewModel>]
+public partial class NodeGridPanel : FrameView
+{
+    // Level 3 Subview: Handled recursively
+    public NodeHealthCard PrimaryNodeCard { get; private set; } = new()
+    {
+        Width = Dim.Percent(50),
+        Height = Dim.Fill()
+    };
+}

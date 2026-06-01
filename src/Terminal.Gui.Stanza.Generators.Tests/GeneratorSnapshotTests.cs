@@ -29,6 +29,10 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
 [TuiView]
 public partial class MyView : View
 {
+    public MyView(MyViewModel viewModel)
+    {
+    }
+
     public Label MyLabel { get; set; } = new() { Text = "Hello" };
 }
 """;
@@ -56,6 +60,49 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
 public partial class MyView : View
 {
     public Label MyLabel { get; set; } = new() { Text = "Hello" };
+}
+""";
+
+        return TestHelper.Verify(source);
+    }
+
+    [Test]
+    public Task GeneratesComplexLayouts()
+    {
+        var source = """
+using Terminal.Gui.Stanza.Abstractions;
+using Terminal.Gui.Stanza;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui;
+
+namespace TestNamespace;
+
+public class MyLabel : View
+{
+    public string Below { get; set; }
+    public string RightOf { get; set; }
+}
+
+public partial class DashboardViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+{
+    public string Summary { get; set; }
+}
+
+[TuiView<DashboardViewModel>]
+public partial class DashboardView : Window
+{
+    public MyLabel LeftPanel { get; set; } = new();
+
+    public MyLabel RightPanel { get; set; } = new() {
+        RightOf = nameof(LeftPanel)
+    };
+
+    public MyLabel FooterLabel { get; set; } = new() {
+        Y = Pos.AnchorEnd(1),
+        X = Pos.Center(),
+        Width = Dim.Fill()
+    };
 }
 """;
 

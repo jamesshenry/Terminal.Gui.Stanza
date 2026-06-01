@@ -84,6 +84,10 @@ internal class InitializeComponentEmitter
         foreach (var viewName in instantiationOrder)
         {
             sb.AppendLine($"        {viewName} ??= new();");
+            if (viewDecl.SubviewsWithViewModel != null && viewDecl.SubviewsWithViewModel.Contains(viewName))
+            {
+                sb.AppendLine($"        {viewName}.ViewModel = this.ViewModel;");
+            }
         }
 
         sb.AppendLine();
@@ -92,8 +96,6 @@ internal class InitializeComponentEmitter
         sb.AppendLine("        // 2. Apply properties and layout");
         foreach (var assignment in viewDecl.PropertyAssignments)
         {
-            if (assignment.IsLayoutConstraint) continue;
-
             var propName = assignment.PropertyName switch
             {
                 "PositionX" => "X",
@@ -102,12 +104,6 @@ internal class InitializeComponentEmitter
             };
             
             sb.AppendLine($"        {assignment.OwnerView}.{propName} = {assignment.ValueExpression};");
-        }
-
-        foreach (var constraint in viewDecl.LayoutConstraints)
-        {
-            var posMethod = constraint.ConstraintType == "Bottom" ? "Bottom" : "Right";
-            sb.AppendLine($"        {constraint.SourceView}.{constraint.TargetProperty} = Pos.{posMethod}({constraint.ReferencedView});");
         }
 
         sb.AppendLine();
@@ -138,7 +134,10 @@ internal class InitializeComponentEmitter
             }
             else
             {
-                sb.AppendLine($"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", vm => vm.{binding.ViewModelProperty}));");
+                var getterExpr = binding.RequiresToString 
+                    ? $"vm => vm.{binding.ViewModelProperty}.ToString()" 
+                    : $"vm => vm.{binding.ViewModelProperty}";
+                sb.AppendLine($"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", {getterExpr}));");
             }
         }
 

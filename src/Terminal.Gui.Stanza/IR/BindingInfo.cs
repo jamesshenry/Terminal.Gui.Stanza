@@ -7,5 +7,6 @@ public record BindingInfo(
     string PropertyName,
     string ViewModelProperty,
     BindingMode BindingMode = BindingMode.OneWay,
-    string? Converter = null
+    string? Converter = null,
+    bool RequiresToString = false
 );

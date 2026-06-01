@@ -25,50 +25,8 @@ internal class TuiViewParser
         var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
         if (classSymbol == null) return null;
 
-        var tuiViewAttr = classSymbol.GetAttributes()
-            .FirstOrDefault(a => 
-                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol) ||
-                (_genericTuiViewAttributeSymbol != null && a.AttributeClass != null && SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, _genericTuiViewAttributeSymbol)));
-
-        if (tuiViewAttr == null) return null;
-
-        INamedTypeSymbol? vmSymbol = null;
-
-        // 1. Resolve TViewModel from generic attribute type argument first
-        if (tuiViewAttr.AttributeClass != null && 
-            tuiViewAttr.AttributeClass.IsGenericType && 
-            tuiViewAttr.AttributeClass.TypeArguments.Length > 0)
-        {
-            vmSymbol = tuiViewAttr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
-        }
-
-        // 2. Fall back to ctor parameters first (Constructor Injection)
-        if (vmSymbol == null)
-        {
-            foreach (var ctorSymbol in classSymbol.InstanceConstructors)
-            {
-                foreach (var param in ctorSymbol.Parameters)
-                {
-                    var typeSymbol = param.Type as INamedTypeSymbol;
-                    if (typeSymbol != null && InheritsFromObservableObject(typeSymbol))
-                    {
-                        vmSymbol = typeSymbol;
-                        break;
-                    }
-                }
-                if (vmSymbol != null) break;
-            }
-        }
-
-        // 3. Fall back to generic base class argument if not found in ctor
-        if (vmSymbol == null)
-        {
-            var baseType = classSymbol.BaseType;
-            if (baseType != null && baseType.IsGenericType && baseType.TypeArguments.Length > 0)
-            {
-                vmSymbol = baseType.TypeArguments[0] as INamedTypeSymbol;
-            }
-        }
+        var vmSymbol = GetViewModelSymbol(classSymbol);
+        if (vmSymbol == null) return null;
 
         bool hasParameterlessCtor = classSymbol.InstanceConstructors
             .Any(c => c.Parameters.Length == 0 && !c.IsImplicitlyDeclared);
@@ -80,21 +38,48 @@ internal class TuiViewParser
         bool generateParameterlessCtor = vmSymbol != null && !hasParameterlessCtor;
         bool generateViewModelCtor = vmSymbol != null && !hasViewModelCtor;
 
-        var assignments = new List<PropertyAssignment>();
-        var bindings = new List<BindingInfo>();
-        var constraints = new List<LayoutConstraint>();
-
+        var declaredSubviews = new HashSet<string>();
         foreach (var member in classDecl.Members)
         {
             if (member is PropertyDeclarationSyntax prop)
             {
-                ParseMemberInitializer(prop.Identifier.Text, prop.Initializer?.Value, assignments, bindings, constraints, vmSymbol);
+                declaredSubviews.Add(prop.Identifier.Text);
             }
             else if (member is FieldDeclarationSyntax field)
             {
                 foreach (var variable in field.Declaration.Variables)
                 {
-                    ParseMemberInitializer(variable.Identifier.Text, variable.Initializer?.Value, assignments, bindings, constraints, vmSymbol);
+                    declaredSubviews.Add(variable.Identifier.Text);
+                }
+            }
+        }
+
+        var assignments = new List<PropertyAssignment>();
+        var bindings = new List<BindingInfo>();
+        var constraints = new List<LayoutConstraint>();
+        var subviewsWithViewModel = new List<string>();
+
+        foreach (var member in classDecl.Members)
+        {
+            if (member is PropertyDeclarationSyntax prop)
+            {
+                var propSymbol = semanticModel.GetDeclaredSymbol(prop) as IPropertySymbol;
+                if (propSymbol != null && propSymbol.Type is INamedTypeSymbol typeSymbol && HasViewModelPropertyOfType(typeSymbol, vmSymbol))
+                {
+                    subviewsWithViewModel.Add(prop.Identifier.Text);
+                }
+                ParseMemberInitializer(prop.Identifier.Text, prop.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews);
+            }
+            else if (member is FieldDeclarationSyntax field)
+            {
+                foreach (var variable in field.Declaration.Variables)
+                {
+                    var fieldSymbol = semanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
+                    if (fieldSymbol != null && fieldSymbol.Type is INamedTypeSymbol typeSymbol && HasViewModelPropertyOfType(typeSymbol, vmSymbol))
+                    {
+                        subviewsWithViewModel.Add(variable.Identifier.Text);
+                    }
+                    ParseMemberInitializer(variable.Identifier.Text, variable.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews);
                 }
             }
         }
@@ -108,8 +93,77 @@ internal class TuiViewParser
             constraints,
             vmSymbol?.ToDisplayString(),
             generateParameterlessCtor,
-            generateViewModelCtor
+            generateViewModelCtor,
+            subviewsWithViewModel
         );
+    }
+
+    private bool HasViewModelPropertyOfType(INamedTypeSymbol typeSymbol, INamedTypeSymbol? vmSymbol)
+    {
+        if (vmSymbol == null) return false;
+
+        // Tier 1: Check uncompiled source code attributes/constructors (before generation)
+        var subviewVmSymbol = GetViewModelSymbol(typeSymbol);
+        if (subviewVmSymbol != null)
+        {
+            return SymbolEqualityComparer.Default.Equals(subviewVmSymbol, vmSymbol);
+        }
+
+        // Tier 2: Fallback for pre-compiled/referenced binary libraries
+        var current = typeSymbol;
+        while (current != null)
+        {
+            var prop = current.GetMembers("ViewModel")
+                .OfType<IPropertySymbol>()
+                .FirstOrDefault();
+            if (prop != null)
+            {
+                return SymbolEqualityComparer.Default.Equals(prop.Type, vmSymbol);
+            }
+            current = current.BaseType;
+        }
+        return false;
+    }
+
+    private INamedTypeSymbol? GetViewModelSymbol(INamedTypeSymbol classSymbol)
+    {
+        var tuiViewAttr = classSymbol.GetAttributes()
+            .FirstOrDefault(a => 
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol) ||
+                (_genericTuiViewAttributeSymbol != null && a.AttributeClass != null && SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, _genericTuiViewAttributeSymbol)));
+
+        if (tuiViewAttr != null)
+        {
+            // 1. Resolve TViewModel from generic attribute type argument first
+            if (tuiViewAttr.AttributeClass != null && 
+                tuiViewAttr.AttributeClass.IsGenericType && 
+                tuiViewAttr.AttributeClass.TypeArguments.Length > 0)
+            {
+                return tuiViewAttr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
+            }
+        }
+
+        // 2. Fall back to ctor parameters (Constructor Injection)
+        foreach (var ctorSymbol in classSymbol.InstanceConstructors)
+        {
+            foreach (var param in ctorSymbol.Parameters)
+            {
+                var typeSymbol = param.Type as INamedTypeSymbol;
+                if (typeSymbol != null && InheritsFromObservableObject(typeSymbol))
+                {
+                    return typeSymbol;
+                }
+            }
+        }
+
+        // 3. Fall back to generic base class argument if not found in ctor
+        var baseType = classSymbol.BaseType;
+        if (baseType != null && baseType.IsGenericType && baseType.TypeArguments.Length > 0)
+        {
+            return baseType.TypeArguments[0] as INamedTypeSymbol;
+        }
+
+        return null;
     }
 
     private bool InheritsFromObservableObject(ITypeSymbol? typeSymbol)
@@ -132,7 +186,8 @@ internal class TuiViewParser
         List<PropertyAssignment> assignments,
         List<BindingInfo> bindings,
         List<LayoutConstraint> constraints,
-        INamedTypeSymbol? vmSymbol)
+        INamedTypeSymbol? vmSymbol,
+        HashSet<string> declaredSubviews)
     {
         InitializerExpressionSyntax? initializerExpr = null;
         if (initializer is ObjectCreationExpressionSyntax objCreation)
@@ -158,48 +213,53 @@ internal class TuiViewParser
                         // Binding: BindText = nameof(vm.Name)
                         var vmProp = ExtractNameof(right);
                         var isWritable = true;
+                        var isString = true;
                         if (vmSymbol != null)
                         {
                             var propSymbol = vmSymbol.GetMembers(vmProp).OfType<IPropertySymbol>().FirstOrDefault();
                             if (propSymbol != null)
                             {
                                 isWritable = !propSymbol.IsReadOnly;
+                                isString = propSymbol.Type.SpecialType == SpecialType.System_String;
                             }
                         }
+                        
                         var bindingMode = isWritable ? BindingMode.TwoWay : BindingMode.OneWay;
-                        bindings.Add(new BindingInfo(memberName, left, vmProp, bindingMode));
+                        var requiresToString = false;
+                        if (left == "BindText" && !isString)
+                        {
+                            bindingMode = BindingMode.OneWay;
+                            requiresToString = true;
+                        }
+                        
+                        bindings.Add(new BindingInfo(memberName, left, vmProp, bindingMode, null, requiresToString));
                     }
                     else if (left == "Below" || left == "RightOf")
                     {
                         var referencedView = ExtractNameof(right);
                         var targetProp = left == "Below" ? "Y" : "X";
-                        var constraintType = left == "Below" ? "Bottom" : "Right";
+                        var targetExpr = left == "Below" ? $"Pos.Bottom({referencedView})" : $"Pos.Right({referencedView})";
                         
-                        assignments.Add(new PropertyAssignment(memberName, left, right, true));
-                        constraints.Add(new LayoutConstraint(memberName, targetProp, constraintType, referencedView));
-                    }
-                    else if (right.Contains("Pos.") || left == "X" || left == "Y" || left == "Width" || left == "Height" || left == "PositionX" || left == "PositionY")
-                    {
-                        // Layout constraint
-                        assignments.Add(new PropertyAssignment(memberName, left, right, true));
-                        
-                        // Try to extract relative reference
-                        if (right.Contains("Pos."))
-                        {
-                            // Very crude extraction for MVP: Pos.Bottom(otherView)
-                            var start = right.IndexOf('(');
-                            var end = right.LastIndexOf(')');
-                            if (start > 0 && end > start)
-                            {
-                                var referencedView = right.Substring(start + 1, end - start - 1);
-                                var constraintType = right.Contains("Bottom") ? "Bottom" : "Right"; // Simplified
-                                constraints.Add(new LayoutConstraint(memberName, left, constraintType, referencedView));
-                            }
-                        }
+                        assignments.Add(new PropertyAssignment(memberName, targetProp, targetExpr));
+                        constraints.Add(new LayoutConstraint(memberName, referencedView));
                     }
                     else
                     {
+                        // Standard property/layout assignment (X, Y, Width, Height, Text, etc.)
                         assignments.Add(new PropertyAssignment(memberName, left, right));
+
+                        // AST-based dependency detection: Find any references to other declared subviews
+                        var referencedIdentifiers = assignment.Right.DescendantNodes()
+                            .OfType<IdentifierNameSyntax>()
+                            .Select(id => id.Identifier.Text);
+
+                        foreach (var identifier in referencedIdentifiers)
+                        {
+                            if (declaredSubviews.Contains(identifier) && identifier != memberName)
+                            {
+                                constraints.Add(new LayoutConstraint(memberName, identifier));
+                            }
+                        }
                     }
                 }
             }

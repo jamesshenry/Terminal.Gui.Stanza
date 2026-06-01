@@ -64,6 +64,9 @@ public static class BindingExtensions
             var newVal = uiGetter(view);
             if (System.Collections.Generic.EqualityComparer<TValue>.Default.Equals(newVal, vmGetter(viewModel))) return;
 
+    var viewId = (view as View)?.Id ?? view?.GetType().Name ?? "Unknown";
+    StanzaConfig.Logger?.Log($"[BindTwoWay] UI -> VM update on '{viewId}' for property '{propertyName}': '{newVal}'");
+
             updating = true;
             try
             {

@@ -11,5 +11,6 @@ public record ViewDeclaration(
     IEnumerable<LayoutConstraint> LayoutConstraints,
     string? ViewModelType = null,
     bool GenerateParameterlessConstructor = false,
-    bool GenerateViewModelConstructor = false
+    bool GenerateViewModelConstructor = false,
+    IEnumerable<string>? SubviewsWithViewModel = null
 );

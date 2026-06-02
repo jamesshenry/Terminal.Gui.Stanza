@@ -119,7 +119,7 @@ public partial class BindingTests
     //     var view = new DemoView(); // No VM set yet
 
     //     // Assert
-    //     await Assert.That(view.Width).IsEqualTo(Dim.Fill()); 
+    //     await Assert.That(view.Width).IsEqualTo(Dim.Fill());
     //     await Assert.That(view.TitleLabel).IsNotNull(); // InitializeComponent must have run
     //     await Assert.That(view.SubViews.Contains(view.TitleLabel)).IsTrue();
     // }
@@ -129,8 +129,8 @@ public partial class BindingTests
 // [TuiView<DemoViewModel>(Title = "Stanza MVVM Demo")]
 // public partial class DemoView : View
 // {
-//     public Label TitleLabel { get; private set; } = new() 
-//     { 
+//     public Label TitleLabel { get; private set; } = new()
+//     {
 //         Text = "Terminal.Gui.Stanza Declarative Demo",
 //         Width = Dim.Auto(),
 //         Height = 1
@@ -186,7 +186,6 @@ public partial class BindingTests
 //     public partial string Name { get; set; } = "Stanza User";
 //     [ObservableProperty]
 //     public partial bool ShowGreetings { get; set; } = true;
-
 
 //     public string GreetingMessage => $"Hello, {Name}! Welcome to Terminal.Gui.Stanza!";
 

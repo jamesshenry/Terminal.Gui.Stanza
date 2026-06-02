@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Terminal.Gui.Stanza.IR;
 using Terminal.Gui.Stanza;
+using Terminal.Gui.Stanza.IR;
 
 namespace Terminal.Gui.Stanza.Generators;
 
@@ -22,7 +22,9 @@ internal class InitializeComponentEmitter
         sb.AppendLine();
         if (!string.IsNullOrEmpty(viewDecl.ViewModelType))
         {
-            sb.AppendLine($"partial class {viewDecl.ClassName} : Terminal.Gui.Stanza.IStanzaView<{viewDecl.ViewModelType}>");
+            sb.AppendLine(
+                $"partial class {viewDecl.ClassName} : Terminal.Gui.Stanza.IStanzaView<{viewDecl.ViewModelType}>"
+            );
             sb.AppendLine("{");
             if (viewDecl.GenerateParameterlessConstructor)
             {
@@ -35,7 +37,9 @@ internal class InitializeComponentEmitter
             }
             if (viewDecl.GenerateViewModelConstructor)
             {
-                sb.AppendLine($"    public {viewDecl.ClassName}({viewDecl.ViewModelType} viewModel) : this()");
+                sb.AppendLine(
+                    $"    public {viewDecl.ClassName}({viewDecl.ViewModelType} viewModel) : this()"
+                );
                 sb.AppendLine("    {");
                 sb.AppendLine("        this.ViewModel = viewModel;");
                 sb.AppendLine("    }");
@@ -59,11 +63,17 @@ internal class InitializeComponentEmitter
             sb.AppendLine("    private BindingContext _bindingContext = new();");
             sb.AppendLine("    public BindingContext BindingContext => _bindingContext;");
             sb.AppendLine();
-            sb.AppendLine("    protected void Bind<T>(System.Func<T> getter, System.Action<T> update, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(getter))] string expr = \"\")");
+            sb.AppendLine(
+                "    protected void Bind<T>(System.Func<T> getter, System.Action<T> update, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(getter))] string expr = \"\")"
+            );
             sb.AppendLine("    {");
             sb.AppendLine("        if (this.ViewModel == null)");
-            sb.AppendLine("            throw new System.InvalidOperationException(\"ViewModel must be set before calling Bind.\");");
-            sb.AppendLine("        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));");
+            sb.AppendLine(
+                "            throw new System.InvalidOperationException(\"ViewModel must be set before calling Bind.\");"
+            );
+            sb.AppendLine(
+                "        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));"
+            );
             sb.AppendLine("    }");
             sb.AppendLine();
             sb.AppendLine("    protected override void Dispose(bool disposing)");
@@ -89,7 +99,10 @@ internal class InitializeComponentEmitter
         foreach (var viewName in instantiationOrder)
         {
             sb.AppendLine($"        {viewName} ??= new();");
-            if (viewDecl.SubviewsWithViewModel != null && viewDecl.SubviewsWithViewModel.Contains(viewName))
+            if (
+                viewDecl.SubviewsWithViewModel != null
+                && viewDecl.SubviewsWithViewModel.Contains(viewName)
+            )
             {
                 sb.AppendLine($"        {viewName}.ViewModel = this.ViewModel;");
             }
@@ -105,10 +118,12 @@ internal class InitializeComponentEmitter
             {
                 "PositionX" => "X",
                 "PositionY" => "Y",
-                _ => assignment.PropertyName
+                _ => assignment.PropertyName,
             };
-            
-            sb.AppendLine($"        {assignment.OwnerView}.{propName} = {assignment.ValueExpression};");
+
+            sb.AppendLine(
+                $"        {assignment.OwnerView}.{propName} = {assignment.ValueExpression};"
+            );
         }
 
         sb.AppendLine();
@@ -126,23 +141,32 @@ internal class InitializeComponentEmitter
                 "BindCommand" => "ApplyBindCommand",
                 "BindVisible" => "ApplyBindVisible",
                 "BindEnabled" => "ApplyBindEnabled",
-                _ => "ApplyBind" // Fallback
+                _ => "ApplyBind", // Fallback
             };
 
             if (bindMethod == "ApplyBindCommand")
             {
-                sb.AppendLine($"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, this.ViewModel!.{binding.ViewModelProperty}));");
+                sb.AppendLine(
+                    $"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, this.ViewModel!.{binding.ViewModelProperty}));"
+                );
             }
-            else if ((bindMethod == "ApplyBindText" || bindMethod == "ApplyBindChecked") && binding.BindingMode == BindingMode.TwoWay)
+            else if (
+                (bindMethod == "ApplyBindText" || bindMethod == "ApplyBindChecked")
+                && binding.BindingMode == BindingMode.TwoWay
+            )
             {
-                sb.AppendLine($"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", vm => vm.{binding.ViewModelProperty}, (vm, val) => vm.{binding.ViewModelProperty} = val));");
+                sb.AppendLine(
+                    $"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", vm => vm.{binding.ViewModelProperty}, (vm, val) => vm.{binding.ViewModelProperty} = val));"
+                );
             }
             else
             {
-                var getterExpr = binding.RequiresToString 
-                    ? $"vm => vm.{binding.ViewModelProperty}.ToString()" 
+                var getterExpr = binding.RequiresToString
+                    ? $"vm => vm.{binding.ViewModelProperty}.ToString()"
                     : $"vm => vm.{binding.ViewModelProperty}";
-                sb.AppendLine($"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", {getterExpr}));");
+                sb.AppendLine(
+                    $"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", {getterExpr}));"
+                );
             }
         }
 
@@ -150,7 +174,9 @@ internal class InitializeComponentEmitter
         sb.AppendLine("        // 4. Add to view hierarchy");
         foreach (var viewName in instantiationOrder)
         {
-            sb.AppendLine($"        if (!this.SubViews.Contains({viewName})) this.Add({viewName});");
+            sb.AppendLine(
+                $"        if (!this.SubViews.Contains({viewName})) this.Add({viewName});"
+            );
         }
 
         sb.AppendLine();

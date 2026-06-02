@@ -15,16 +15,20 @@ public partial class IdentitySection : FrameView
     }
 
     public Label UserLabel { get; set; } = new() { Text = "Username:" };
-    
-    public TextField UserInput { get; set; } = new() {
-        BindText = nameof(DashboardViewModel.Username),
-        Below = nameof(UserLabel),
-        Width = Dim.Fill()
-    };
 
-    public CheckBox NotifyCheck { get; set; } = new() {
-        Text = "Enable Notifications",
-        BindChecked = nameof(DashboardViewModel.NotificationsEnabled),
-        Below = nameof(UserInput)
-    };
+    public TextField UserInput { get; set; } =
+        new()
+        {
+            BindText = nameof(DashboardViewModel.Username),
+            Below = nameof(UserLabel),
+            Width = Dim.Fill(),
+        };
+
+    public CheckBox NotifyCheck { get; set; } =
+        new()
+        {
+            Text = "Enable Notifications",
+            BindChecked = nameof(DashboardViewModel.NotificationsEnabled),
+            Below = nameof(UserInput),
+        };
 }

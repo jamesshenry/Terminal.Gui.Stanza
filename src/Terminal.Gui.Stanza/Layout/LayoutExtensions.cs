@@ -35,8 +35,16 @@ public static class LayoutExtensions
             set { } // Placeholder
         }
 
-        public string Below { get => string.Empty; set { } }
-        public string RightOf { get => string.Empty; set { } }
+        public string Below
+        {
+            get => string.Empty;
+            set { }
+        }
+        public string RightOf
+        {
+            get => string.Empty;
+            set { }
+        }
 
         /// <summary>
         /// Align this view's right edge to another view's right edge.

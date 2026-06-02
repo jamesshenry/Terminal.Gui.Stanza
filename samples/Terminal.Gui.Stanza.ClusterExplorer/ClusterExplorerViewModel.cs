@@ -8,9 +8,9 @@ public partial class ClusterExplorerViewModel : ObservableObject, IDisposable
 
     private static readonly (string Name, string Ip)[] Nodes =
     [
-        ("Node-Alpha",   "10.0.0.12"),
-        ("Node-Beta",    "10.0.0.13"),
-        ("Node-Gamma",   "10.0.0.14"),
+        ("Node-Alpha", "10.0.0.12"),
+        ("Node-Beta", "10.0.0.13"),
+        ("Node-Gamma", "10.0.0.14"),
     ];
 
     private static readonly Random Rng = new();
@@ -22,22 +22,22 @@ public partial class ClusterExplorerViewModel : ObservableObject, IDisposable
     private readonly Timer _timer;
 
     [ObservableProperty]
-    public partial string ClusterName {get;set;} = "Prod-Cluster-01";
+    public partial string ClusterName { get; set; } = "Prod-Cluster-01";
 
     [ObservableProperty]
-    public partial string NodeName {get;set;} = "Node-Alpha";
+    public partial string NodeName { get; set; } = "Node-Alpha";
 
     [ObservableProperty]
-    public partial string NodeIp {get;set;} = "10.0.0.12";
+    public partial string NodeIp { get; set; } = "10.0.0.12";
 
     [ObservableProperty]
-    public partial string CpuUsageText {get;set;} = "45%";
+    public partial string CpuUsageText { get; set; } = "45%";
 
     [ObservableProperty]
-    public partial string RamUsageText {get;set;} = "72%";
+    public partial string RamUsageText { get; set; } = "72%";
 
     [ObservableProperty]
-    public partial float[] CpuHistory {get;set;}= [];
+    public partial float[] CpuHistory { get; set; } = [];
 
     public ClusterExplorerViewModel()
     {
@@ -64,7 +64,7 @@ public partial class ClusterExplorerViewModel : ObservableObject, IDisposable
         {
             _nodeIndex = (_nodeIndex + 1) % Nodes.Length;
             NodeName = Nodes[_nodeIndex].Name;
-            NodeIp   = Nodes[_nodeIndex].Ip;
+            NodeIp = Nodes[_nodeIndex].Ip;
         }
     }
 

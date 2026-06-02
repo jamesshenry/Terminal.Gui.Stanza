@@ -133,7 +133,9 @@ public partial class CircularView : View
 """;
 
         var diagnostics = TestHelper.VerifyDiagnostics(source);
-        await Assert.That(diagnostics.Any(d => d.Id == "STN001" && d.Severity == DiagnosticSeverity.Error)).IsTrue();
+        await Assert
+            .That(diagnostics.Any(d => d.Id == "STN001" && d.Severity == DiagnosticSeverity.Error))
+            .IsTrue();
     }
 
     [Test]
@@ -316,7 +318,9 @@ public partial class TitleWindow : Window
 """;
 
         var generated = TestHelper.GetGeneratedSource(source, "TitleWindow.g.cs");
-        await Assert.That(generated.Contains("this.Title = \"My Form\";", StringComparison.Ordinal)).IsTrue();
+        await Assert
+            .That(generated.Contains("this.Title = \"My Form\";", StringComparison.Ordinal))
+            .IsTrue();
     }
 
     [Test]
@@ -346,7 +350,14 @@ public partial class LayoutView : View
 """;
 
         var generated = TestHelper.GetGeneratedSource(source, "LayoutView.g.cs");
-        await Assert.That(generated.Contains("NameInput.Y = Pos.Bottom(TitleLabel);", StringComparison.Ordinal)).IsTrue();
+        await Assert
+            .That(
+                generated.Contains(
+                    "NameInput.Y = Pos.Bottom(TitleLabel);",
+                    StringComparison.Ordinal
+                )
+            )
+            .IsTrue();
     }
 
     [Test]
@@ -376,7 +387,11 @@ public partial class SyntheticView : View
 """;
 
         var generated = TestHelper.GetGeneratedSource(source, "SyntheticView.g.cs");
-        await Assert.That(generated.Contains("MyLabel.Y = Pos.Bottom(OtherLabel);", StringComparison.Ordinal)).IsTrue();
+        await Assert
+            .That(
+                generated.Contains("MyLabel.Y = Pos.Bottom(OtherLabel);", StringComparison.Ordinal)
+            )
+            .IsTrue();
     }
 
     [Test]
@@ -406,8 +421,17 @@ public partial class ReadOnlyBindingView : View
 """;
 
         var generated = TestHelper.GetGeneratedSource(source, "ReadOnlyBindingView.g.cs");
-        await Assert.That(generated.Contains("BindingContext.AddBinding(NameLabel.ApplyBindText(this.ViewModel!, \"Name\", vm => vm.Name));", StringComparison.Ordinal)).IsTrue();
-        await Assert.That(generated.Contains("(vm, val) => vm.Name = val", StringComparison.Ordinal)).IsFalse();
+        await Assert
+            .That(
+                generated.Contains(
+                    "BindingContext.AddBinding(NameLabel.ApplyBindText(this.ViewModel!, \"Name\", vm => vm.Name));",
+                    StringComparison.Ordinal
+                )
+            )
+            .IsTrue();
+        await Assert
+            .That(generated.Contains("(vm, val) => vm.Name = val", StringComparison.Ordinal))
+            .IsFalse();
     }
 }
 
@@ -424,7 +448,13 @@ public static class TestHelper
 
         if (compileDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {
-            throw new Exception("Compilation errors:\n" + string.Join("\n", compileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error)));
+            throw new Exception(
+                "Compilation errors:\n"
+                    + string.Join(
+                        "\n",
+                        compileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error)
+                    )
+            );
         }
 
         return Verifier.Verify(driver);
@@ -445,8 +475,8 @@ public static class TestHelper
     public static string GetGeneratedSource(string source, string hintName)
     {
         var (_, _, runResult, _) = RunGenerator(source);
-        var generated = runResult.Results
-            .SelectMany(r => r.GeneratedSources)
+        var generated = runResult
+            .Results.SelectMany(r => r.GeneratedSources)
             .FirstOrDefault(gs => gs.HintName == hintName);
 
         if (generated.HintName is null)
@@ -457,7 +487,12 @@ public static class TestHelper
         return generated.SourceText.ToString();
     }
 
-    private static (GeneratorDriver Driver, CSharpCompilation Compilation, GeneratorDriverRunResult RunResult, IReadOnlyList<Diagnostic> CompileDiagnostics) RunGenerator(string source)
+    private static (
+        GeneratorDriver Driver,
+        CSharpCompilation Compilation,
+        GeneratorDriverRunResult RunResult,
+        IReadOnlyList<Diagnostic> CompileDiagnostics
+    ) RunGenerator(string source)
     {
         // Force the JIT/runtime to load the dependent assemblies into the AppDomain
         _ = typeof(Terminal.Gui.Stanza.TuiViewAttribute).Assembly;
@@ -465,10 +500,14 @@ public static class TestHelper
         _ = typeof(Terminal.Gui.Views.Label).Assembly;
         _ = typeof(Terminal.Gui.Stanza.IStanzaView<>).Assembly;
 
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview));
+        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(
+            source,
+            new CSharpParseOptions(LanguageVersion.Preview)
+        );
 
         // Dynamically get all currently loaded assemblies in the AppDomain to populate compilation references
-        var references = AppDomain.CurrentDomain.GetAssemblies()
+        var references = AppDomain
+            .CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
             .Select(a => MetadataReference.CreateFromFile(a.Location))
             .Cast<MetadataReference>()
@@ -478,13 +517,15 @@ public static class TestHelper
             assemblyName: "Tests",
             syntaxTrees: new[] { syntaxTree },
             references: references,
-            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+        );
 
         var generator = new TuiViewGenerator();
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new[] { generator.AsSourceGenerator() },
-            parseOptions: new CSharpParseOptions(LanguageVersion.Preview));
+            parseOptions: new CSharpParseOptions(LanguageVersion.Preview)
+        );
 
         driver = driver.RunGenerators(compilation);
 

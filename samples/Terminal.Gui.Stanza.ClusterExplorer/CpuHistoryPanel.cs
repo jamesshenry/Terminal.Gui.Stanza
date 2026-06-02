@@ -20,11 +20,8 @@ public partial class CpuHistoryPanel : FrameView
         Title = "CPU History";
     }
 
-    public GraphView HistoryGraph { get; private set; } = new()
-    {
-        Width = Dim.Fill(),
-        Height = Dim.Fill(),
-    };
+    public GraphView HistoryGraph { get; private set; } =
+        new() { Width = Dim.Fill(), Height = Dim.Fill() };
 
     partial void OnInitialized()
     {
@@ -41,11 +38,14 @@ public partial class CpuHistoryPanel : FrameView
         {
             return;
         }
-App?.AddTimeout(TimeSpan.FromMilliseconds(250), () =>
-        {
-            UpdateGraph(ViewModel?.CpuHistory ?? []);
-            return true;
-        });
+        App?.AddTimeout(
+            TimeSpan.FromMilliseconds(250),
+            () =>
+            {
+                UpdateGraph(ViewModel?.CpuHistory ?? []);
+                return true;
+            }
+        );
 
         _refreshLoopStarted = true;
     }
@@ -96,7 +96,10 @@ App?.AddTimeout(TimeSpan.FromMilliseconds(250), () =>
 
         var minCpu = cpuHistory.Min();
         var maxCpu = cpuHistory.Max();
-        var graphHeight = Math.Max(1, HistoryGraph.Viewport.Height - (int)HistoryGraph.MarginBottom);
+        var graphHeight = Math.Max(
+            1,
+            HistoryGraph.Viewport.Height - (int)HistoryGraph.MarginBottom
+        );
         var paddedMin = Math.Max(0, minCpu - 5);
         var paddedRange = Math.Max(10, (maxCpu - paddedMin) + 10);
 
@@ -105,7 +108,10 @@ App?.AddTimeout(TimeSpan.FromMilliseconds(250), () =>
 
         for (var index = 0; index < cpuHistory.Length; index++)
         {
-            var point = new PointF(index * ClusterExplorerViewModel.SampleIntervalMs, cpuHistory[index]);
+            var point = new PointF(
+                index * ClusterExplorerViewModel.SampleIntervalMs,
+                cpuHistory[index]
+            );
             _cpuSeries.Points.Add(point);
             _cpuTrend.Points.Add(point);
         }

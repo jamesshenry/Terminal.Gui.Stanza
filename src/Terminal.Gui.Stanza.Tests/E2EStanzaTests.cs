@@ -1,7 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
-
 using Terminal.Gui.Views;
 
 namespace Terminal.Gui.Stanza.Tests;
@@ -16,17 +15,11 @@ public partial class SimpleViewModel : ObservableObject
 public partial class SimpleFormView : View
 {
     public Label TitleLabel { get; private set; } = new() { Text = "Form" };
-    public TextField NameInput { get; private set; } = new() { 
-        BindText = nameof(SimpleViewModel.Name),
-        Below = nameof(TitleLabel)
-    };
-    public Button SubmitButton { get; private set; } = new() { 
-        Text = "Submit",
-        Below = nameof(NameInput)
-    };
+    public TextField NameInput { get; private set; } =
+        new() { BindText = nameof(SimpleViewModel.Name), Below = nameof(TitleLabel) };
+    public Button SubmitButton { get; private set; } =
+        new() { Text = "Submit", Below = nameof(NameInput) };
 }
-
-
 
 public class E2EStanzaTests
 {

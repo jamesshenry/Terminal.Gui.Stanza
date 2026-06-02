@@ -8,7 +8,10 @@ public class FileLogger : ILogger, System.IDisposable
 
     public FileLogger()
     {
-        System.IO.File.WriteAllText(_path, $"=== Stanza Binding Log Started at {System.DateTime.Now} ===\n");
+        System.IO.File.WriteAllText(
+            _path,
+            $"=== Stanza Binding Log Started at {System.DateTime.Now} ===\n"
+        );
         _writeTask = System.Threading.Tasks.Task.Run(ProcessQueue);
     }
 

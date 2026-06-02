@@ -10,12 +10,19 @@ internal class DependencyResolver
     /// Topologically sort views by layout dependencies.
     /// If viewB.Y = Pos.Bottom(viewA), then viewA must be instantiated before viewB.
     /// </summary>
-    public List<string> ResolveOrder(IEnumerable<LayoutConstraint> constraints, IEnumerable<string> allViewNames)
+    public List<string> ResolveOrder(
+        IEnumerable<LayoutConstraint> constraints,
+        IEnumerable<string> allViewNames
+    )
     {
         return ResolveOrder(constraints, allViewNames, out _);
     }
 
-    public List<string> ResolveOrder(IEnumerable<LayoutConstraint> constraints, IEnumerable<string> allViewNames, out bool hasCycle)
+    public List<string> ResolveOrder(
+        IEnumerable<LayoutConstraint> constraints,
+        IEnumerable<string> allViewNames,
+        out bool hasCycle
+    )
     {
         // Build adjacency list: viewName → List of views that depend on it
         var graph = new Dictionary<string, List<string>>();
@@ -31,7 +38,10 @@ internal class DependencyResolver
         foreach (var constraint in constraints)
         {
             // Constraint: targetView depends on referencedView
-            if (graph.ContainsKey(constraint.ReferencedView) && graph.ContainsKey(constraint.SourceView))
+            if (
+                graph.ContainsKey(constraint.ReferencedView)
+                && graph.ContainsKey(constraint.SourceView)
+            )
             {
                 graph[constraint.ReferencedView].Add(constraint.SourceView);
                 inDegree[constraint.SourceView]++;

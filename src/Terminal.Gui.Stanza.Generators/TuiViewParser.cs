@@ -14,7 +14,10 @@ internal class TuiViewParser
     private readonly INamedTypeSymbol _tuiViewAttributeSymbol;
     private readonly INamedTypeSymbol? _genericTuiViewAttributeSymbol;
 
-    public TuiViewParser(INamedTypeSymbol tuiViewAttributeSymbol, INamedTypeSymbol? genericTuiViewAttributeSymbol)
+    public TuiViewParser(
+        INamedTypeSymbol tuiViewAttributeSymbol,
+        INamedTypeSymbol? genericTuiViewAttributeSymbol
+    )
     {
         _tuiViewAttributeSymbol = tuiViewAttributeSymbol;
         _genericTuiViewAttributeSymbol = genericTuiViewAttributeSymbol;
@@ -23,19 +26,23 @@ internal class TuiViewParser
     public ViewDeclaration? Parse(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {
         var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
-        if (classSymbol == null) return null;
+        if (classSymbol == null)
+            return null;
 
         var vmSymbol = GetViewModelSymbol(classSymbol);
-        if (vmSymbol == null) return null;
+        if (vmSymbol == null)
+            return null;
 
         var title = GetTitle(classSymbol);
 
-        bool hasParameterlessCtor = classSymbol.InstanceConstructors
-            .Any(c => c.Parameters.Length == 0 && !c.IsImplicitlyDeclared);
+        bool hasParameterlessCtor = classSymbol.InstanceConstructors.Any(c =>
+            c.Parameters.Length == 0 && !c.IsImplicitlyDeclared
+        );
 
-        bool hasViewModelCtor = classSymbol.InstanceConstructors
-            .Any(c => c.Parameters.Length == 1 && 
-                 SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, vmSymbol));
+        bool hasViewModelCtor = classSymbol.InstanceConstructors.Any(c =>
+            c.Parameters.Length == 1
+            && SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, vmSymbol)
+        );
 
         bool generateParameterlessCtor = vmSymbol != null && !hasParameterlessCtor;
         bool generateViewModelCtor = vmSymbol != null && !hasViewModelCtor;
@@ -66,22 +73,48 @@ internal class TuiViewParser
             if (member is PropertyDeclarationSyntax prop)
             {
                 var propSymbol = semanticModel.GetDeclaredSymbol(prop) as IPropertySymbol;
-                if (propSymbol != null && propSymbol.Type is INamedTypeSymbol typeSymbol && HasViewModelPropertyOfType(typeSymbol, vmSymbol))
+                if (
+                    propSymbol != null
+                    && propSymbol.Type is INamedTypeSymbol typeSymbol
+                    && HasViewModelPropertyOfType(typeSymbol, vmSymbol)
+                )
                 {
                     subviewsWithViewModel.Add(prop.Identifier.Text);
                 }
-                ParseMemberInitializer(prop.Identifier.Text, prop.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews, semanticModel);
+                ParseMemberInitializer(
+                    prop.Identifier.Text,
+                    prop.Initializer?.Value,
+                    assignments,
+                    bindings,
+                    constraints,
+                    vmSymbol,
+                    declaredSubviews,
+                    semanticModel
+                );
             }
             else if (member is FieldDeclarationSyntax field)
             {
                 foreach (var variable in field.Declaration.Variables)
                 {
                     var fieldSymbol = semanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
-                    if (fieldSymbol != null && fieldSymbol.Type is INamedTypeSymbol typeSymbol && HasViewModelPropertyOfType(typeSymbol, vmSymbol))
+                    if (
+                        fieldSymbol != null
+                        && fieldSymbol.Type is INamedTypeSymbol typeSymbol
+                        && HasViewModelPropertyOfType(typeSymbol, vmSymbol)
+                    )
                     {
                         subviewsWithViewModel.Add(variable.Identifier.Text);
                     }
-                    ParseMemberInitializer(variable.Identifier.Text, variable.Initializer?.Value, assignments, bindings, constraints, vmSymbol, declaredSubviews, semanticModel);
+                    ParseMemberInitializer(
+                        variable.Identifier.Text,
+                        variable.Initializer?.Value,
+                        assignments,
+                        bindings,
+                        constraints,
+                        vmSymbol,
+                        declaredSubviews,
+                        semanticModel
+                    );
                 }
             }
         }
@@ -103,7 +136,8 @@ internal class TuiViewParser
 
     private bool HasViewModelPropertyOfType(INamedTypeSymbol typeSymbol, INamedTypeSymbol? vmSymbol)
     {
-        if (vmSymbol == null) return false;
+        if (vmSymbol == null)
+            return false;
 
         // Tier 1: Check uncompiled source code attributes/constructors (before generation)
         var subviewVmSymbol = GetViewModelSymbol(typeSymbol);
@@ -116,9 +150,7 @@ internal class TuiViewParser
         var current = typeSymbol;
         while (current != null)
         {
-            var prop = current.GetMembers("ViewModel")
-                .OfType<IPropertySymbol>()
-                .FirstOrDefault();
+            var prop = current.GetMembers("ViewModel").OfType<IPropertySymbol>().FirstOrDefault();
             if (prop != null)
             {
                 return SymbolEqualityComparer.Default.Equals(prop.Type, vmSymbol);
@@ -130,32 +162,52 @@ internal class TuiViewParser
 
     private string? GetTitle(INamedTypeSymbol classSymbol)
     {
-        var tuiViewAttr = classSymbol.GetAttributes()
+        var tuiViewAttr = classSymbol
+            .GetAttributes()
             .FirstOrDefault(a =>
-                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol) ||
-                (_genericTuiViewAttributeSymbol != null && a.AttributeClass != null && SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, _genericTuiViewAttributeSymbol)));
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol)
+                || (
+                    _genericTuiViewAttributeSymbol != null
+                    && a.AttributeClass != null
+                    && SymbolEqualityComparer.Default.Equals(
+                        a.AttributeClass.OriginalDefinition,
+                        _genericTuiViewAttributeSymbol
+                    )
+                )
+            );
 
-        if (tuiViewAttr == null) return null;
+        if (tuiViewAttr == null)
+            return null;
 
-        var namedArg = tuiViewAttr.NamedArguments
-            .FirstOrDefault(a => a.Key == "Title");
+        var namedArg = tuiViewAttr.NamedArguments.FirstOrDefault(a => a.Key == "Title");
 
         return namedArg.Key == "Title" ? namedArg.Value.Value as string : null;
     }
 
     private INamedTypeSymbol? GetViewModelSymbol(INamedTypeSymbol classSymbol)
     {
-        var tuiViewAttr = classSymbol.GetAttributes()
-            .FirstOrDefault(a => 
-                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol) ||
-                (_genericTuiViewAttributeSymbol != null && a.AttributeClass != null && SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, _genericTuiViewAttributeSymbol)));
+        var tuiViewAttr = classSymbol
+            .GetAttributes()
+            .FirstOrDefault(a =>
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol)
+                || (
+                    _genericTuiViewAttributeSymbol != null
+                    && a.AttributeClass != null
+                    && SymbolEqualityComparer.Default.Equals(
+                        a.AttributeClass.OriginalDefinition,
+                        _genericTuiViewAttributeSymbol
+                    )
+                )
+            );
 
         if (tuiViewAttr != null)
         {
             // 1. Resolve TViewModel from generic attribute type argument first
-            if (tuiViewAttr.AttributeClass != null && 
-                tuiViewAttr.AttributeClass.IsGenericType && 
-                tuiViewAttr.AttributeClass.TypeArguments.Length > 0)
+            if (
+                tuiViewAttr.AttributeClass != null
+                && tuiViewAttr.AttributeClass.IsGenericType
+                && tuiViewAttr.AttributeClass.TypeArguments.Length > 0
+            )
             {
                 return tuiViewAttr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
             }
@@ -196,7 +248,9 @@ internal class TuiViewParser
             return true;
         }
 
-        return typeSymbol.AllInterfaces.Any(i => i.ToDisplayString() == "System.ComponentModel.INotifyPropertyChanged");
+        return typeSymbol.AllInterfaces.Any(i =>
+            i.ToDisplayString() == "System.ComponentModel.INotifyPropertyChanged"
+        );
     }
 
     private void ParseMemberInitializer(
@@ -207,7 +261,8 @@ internal class TuiViewParser
         List<LayoutConstraint> constraints,
         INamedTypeSymbol? vmSymbol,
         HashSet<string> declaredSubviews,
-        SemanticModel semanticModel)
+        SemanticModel semanticModel
+    )
     {
         InitializerExpressionSyntax? initializerExpr = null;
         if (initializer is ObjectCreationExpressionSyntax objCreation)
@@ -236,14 +291,17 @@ internal class TuiViewParser
                         var isString = true;
                         if (vmSymbol != null)
                         {
-                            var propSymbol = vmSymbol.GetMembers(vmProp).OfType<IPropertySymbol>().FirstOrDefault();
+                            var propSymbol = vmSymbol
+                                .GetMembers(vmProp)
+                                .OfType<IPropertySymbol>()
+                                .FirstOrDefault();
                             if (propSymbol != null)
                             {
                                 isWritable = !propSymbol.IsReadOnly;
                                 isString = propSymbol.Type.SpecialType == SpecialType.System_String;
                             }
                         }
-                        
+
                         var bindingMode = isWritable ? BindingMode.TwoWay : BindingMode.OneWay;
                         var requiresToString = false;
                         if (left == "BindText" && !isString)
@@ -251,15 +309,27 @@ internal class TuiViewParser
                             bindingMode = BindingMode.OneWay;
                             requiresToString = true;
                         }
-                        
-                        bindings.Add(new BindingInfo(memberName, left, vmProp, bindingMode, null, requiresToString));
+
+                        bindings.Add(
+                            new BindingInfo(
+                                memberName,
+                                left,
+                                vmProp,
+                                bindingMode,
+                                null,
+                                requiresToString
+                            )
+                        );
                     }
                     else if (left == "Below" || left == "RightOf")
                     {
                         var referencedView = ExtractNameof(assignment.Right, semanticModel);
                         var targetProp = left == "Below" ? "Y" : "X";
-                        var targetExpr = left == "Below" ? $"Pos.Bottom({referencedView})" : $"Pos.Right({referencedView})";
-                        
+                        var targetExpr =
+                            left == "Below"
+                                ? $"Pos.Bottom({referencedView})"
+                                : $"Pos.Right({referencedView})";
+
                         assignments.Add(new PropertyAssignment(memberName, targetProp, targetExpr));
                         constraints.Add(new LayoutConstraint(memberName, referencedView));
                     }
@@ -269,7 +339,8 @@ internal class TuiViewParser
                         assignments.Add(new PropertyAssignment(memberName, left, right));
 
                         // AST-based dependency detection: Find any references to other declared subviews
-                        var referencedIdentifiers = assignment.Right.DescendantNodes()
+                        var referencedIdentifiers = assignment
+                            .Right.DescendantNodes()
                             .OfType<IdentifierNameSyntax>()
                             .Select(id => id.Identifier.Text);
 
@@ -288,10 +359,12 @@ internal class TuiViewParser
 
     private string ExtractNameof(ExpressionSyntax expression, SemanticModel semanticModel)
     {
-        if (expression is InvocationExpressionSyntax invocation &&
-            invocation.Expression is IdentifierNameSyntax identifier &&
-            identifier.Identifier.Text == "nameof" &&
-            invocation.ArgumentList.Arguments.Count == 1)
+        if (
+            expression is InvocationExpressionSyntax invocation
+            && invocation.Expression is IdentifierNameSyntax identifier
+            && identifier.Identifier.Text == "nameof"
+            && invocation.ArgumentList.Arguments.Count == 1
+        )
         {
             var argExpression = invocation.ArgumentList.Arguments[0].Expression;
             if (argExpression is MemberAccessExpressionSyntax memberAccess)
@@ -313,7 +386,10 @@ internal class TuiViewParser
             return argExpression.ToString().Split('.').Last();
         }
 
-        if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+        if (
+            expression is LiteralExpressionSyntax literal
+            && literal.IsKind(SyntaxKind.StringLiteralExpression)
+        )
         {
             return literal.Token.ValueText;
         }

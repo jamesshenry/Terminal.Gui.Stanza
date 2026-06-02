@@ -9,7 +9,4 @@
     <!-- <PackageReference Include="CommunityToolkit.Mvvm" /> -->
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
-
-
-
 </Project>

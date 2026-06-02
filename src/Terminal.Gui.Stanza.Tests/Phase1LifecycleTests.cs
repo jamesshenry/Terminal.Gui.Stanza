@@ -1,9 +1,9 @@
 using System.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terminal.Gui;
+using Terminal.Gui.Stanza;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using Terminal.Gui.Stanza;
 
 namespace Terminal.Gui.Stanza.Tests;
 
@@ -18,11 +18,8 @@ public partial class Phase1LifecycleView : View
 {
     public Label HeaderLabel { get; private set; } = new() { Text = "Header" };
 
-    public TextField NameInput { get; private set; } = new()
-    {
-        BindText = nameof(Phase1ViewModel.Name),
-        Below = nameof(HeaderLabel)
-    };
+    public TextField NameInput { get; private set; } =
+        new() { BindText = nameof(Phase1ViewModel.Name), Below = nameof(HeaderLabel) };
 }
 
 [TuiView<Phase1ViewModel>]

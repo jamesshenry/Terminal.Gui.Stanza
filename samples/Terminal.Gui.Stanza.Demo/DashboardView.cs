@@ -15,16 +15,16 @@ public partial class DashboardView : Window
     // Nested Sub-Views
     public IdentitySection LeftPanel { get; set; } = new();
 
-    public StatsSection RightPanel { get; set; } = new() {
-        RightOf = nameof(LeftPanel),
-    };
+    public StatsSection RightPanel { get; set; } = new() { RightOf = nameof(LeftPanel) };
 
     // Global Footer added to the parent
-    public Label FooterLabel { get; set; } = new() {
-        BindText = nameof(DashboardViewModel.Summary),
-        Y = Pos.AnchorEnd(1),
-        X = Pos.Center(),
-        Width = Dim.Fill(),
-        TextAlignment = Alignment.Center,
-    };
+    public Label FooterLabel { get; set; } =
+        new()
+        {
+            BindText = nameof(DashboardViewModel.Summary),
+            Y = Pos.AnchorEnd(1),
+            X = Pos.Center(),
+            Width = Dim.Fill(),
+            TextAlignment = Alignment.Center,
+        };
 }

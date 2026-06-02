@@ -13,6 +13,4 @@ public class TuiViewAttribute : Attribute
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class TuiViewAttribute<TViewModel> : TuiViewAttribute
-    where TViewModel : System.ComponentModel.INotifyPropertyChanged
-{
-}
+    where TViewModel : System.ComponentModel.INotifyPropertyChanged { }

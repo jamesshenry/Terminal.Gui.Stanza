@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsRoslynComponent>true</IsRoslynComponent>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Compile shared IR files directly into the analyzer to keep it zero-dependency and netstandard2.0 compatible -->
+    <Compile Include="..\Stanza.TerminalGui\BindingMode.cs" Link="BindingMode.cs" />
+    <!-- <Compile Include="..\Stanza.TerminalGui\IsExternalInit.cs" Link="IsExternalInit.cs" /> -->
+    <Compile Include="..\Stanza.TerminalGui\IR\BindingInfo.cs" Link="IR\BindingInfo.cs" />
+    <Compile
+      Include="..\Stanza.TerminalGui\IR\LayoutConstraint.cs"
+      Link="IR\LayoutConstraint.cs"
+    />
+    <Compile
+      Include="..\Stanza.TerminalGui\IR\PropertyAssignment.cs"
+      Link="IR\PropertyAssignment.cs"
+    />
+    <Compile Include="..\Stanza.TerminalGui\IR\ViewDeclaration.cs" Link="IR\ViewDeclaration.cs" />
+  </ItemGroup>
+  <ItemGroup>
+  <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+  <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+</ItemGroup>
+</Project>

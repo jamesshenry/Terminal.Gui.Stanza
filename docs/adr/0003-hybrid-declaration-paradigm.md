@@ -13,8 +13,8 @@ The project wants the ergonomics of declarative view definitions without introdu
 Use a hybrid declaration model with two authoring mechanisms:
 
 1. Class-level attributes for view metadata and view-model association.
-   - `[TuiView]`
-   - `[TuiView<TViewModel>]`
+   - `[StanzaView]`
+   - `[StanzaView<TViewModel>]`
 
 2. C# extension members on `Terminal.Gui.View` for per-control declarative intent inside object initializers.
    - layout placeholders such as `PositionX`, `PositionY`, `Width`, `Height`, `Below`, and `RightOf`

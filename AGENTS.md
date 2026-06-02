@@ -1,20 +1,20 @@
-# Terminal.Gui.Stanza
+# Stanza.TerminalGui
 
-A declarative, attribute-based UI engine for **Terminal.Gui v2**, targeting .NET 11 / C# 15. **Terminal.Gui.Stanza** (or simply "Stanza") transforms the imperative Terminal.Gui API into a modern, schema-driven framework using Source Generators and C# 14/15 Extension Members.
+A declarative, attribute-based UI engine for **Terminal.Gui v2**, targeting .NET 11 / C# 15. **Stanza.TerminalGui** (or simply "Stanza") transforms the imperative Terminal.Gui API into a modern, schema-driven framework using Source Generators and C# 14/15 Extension Members.
 
 ## Build & Test
 
-- Build: `dotnet build Terminal.Gui.Stanza.slnx`
-- Test: `dotnet test Terminal.Gui.Stanza.slnx`
-- Single test: `dotnet test Terminal.Gui.Stanza.slnx --filter "FullyQualifiedName~TestName"`
-- Snapshot Testing: Uses `Verify.SourceGenerators` in `src/Terminal.Gui.Stanza.Generators.Tests/`
+- Build: `dotnet build Stanza.TerminalGui.slnx`
+- Test: `dotnet test Stanza.TerminalGui.slnx`
+- Single test: `dotnet test Stanza.TerminalGui.slnx --filter "FullyQualifiedName~TestName"`
+- Snapshot Testing: Uses `Verify.SourceGenerators` in `src/Stanza.TerminalGui.Generators.Tests/`
 
 ## Project Structure
 
-- `src/Terminal.Gui.Stanza/` — Consumer-facing runtime and authoring surface. Contains `[TuiView]`, IR records, `BindingContext`, binding helpers, and layout extension members.
-- `src/Terminal.Gui.Stanza.Generators/` — The Roslyn `IIncrementalGenerator`. Contains the parser, dependency resolver, and C# emitter.
-- `src/Terminal.Gui.Stanza.Generators.Tests/` — Snapshot-driven generator tests that also recompile generated output.
-- `src/Terminal.Gui.Stanza.Tests/` — End-to-end runtime tests for generated binding behavior.
+- `src/Stanza.TerminalGui/` — Consumer-facing runtime and authoring surface. Contains `[StanzaView]`, IR records, `BindingContext`, binding helpers, and layout extension members.
+- `src/Stanza.TerminalGui.Generators/` — The Roslyn `IIncrementalGenerator`. Contains the parser, dependency resolver, and C# emitter.
+- `src/Stanza.TerminalGui.Generators.Tests/` — Snapshot-driven generator tests that also recompile generated output.
+- `src/Stanza.TerminalGui.Tests/` — End-to-end runtime tests for generated binding behavior.
 
 ## The Stanza Paradigm
 
@@ -26,9 +26,9 @@ Stanza eliminates "Glue Code" by treating UI definitions as a **Schema** rather 
 
 ## Key Namespaces
 
-- `Terminal.Gui.Stanza` — `BindingContext` and `BindingExtensions` (The MVVM glue).
-- `Terminal.Gui.Stanza` — C# 14 Extension properties for `Terminal.Gui.View` (The Layout DSL).
-- `Terminal.Gui.Stanza.Generators.IR` — The Intermediate Representation models that decouple TUI logic from Roslyn symbols.
+- `Stanza.TerminalGui` — `BindingContext` and `BindingExtensions` (The MVVM glue).
+- `Stanza.TerminalGui` — C# 14 Extension properties for `Terminal.Gui.View` (The Layout DSL).
+- `Stanza.TerminalGui.Generators.IR` — The Intermediate Representation models that decouple TUI logic from Roslyn symbols.
 
 ## ADR Index (Architecture Decision Records)
 
@@ -63,7 +63,7 @@ Located in `docs/adr/`:
 
 **Touch only what you must. Clean up only your own mess.**
 
-- When updating the `Terminal.Gui.Stanza.Generators` Parser, ensure pre-existing snapshots in the test project still pass or are updated intentionally.
+- When updating the `Stanza.TerminalGui.Generators` Parser, ensure pre-existing snapshots in the test project still pass or are updated intentionally.
 - Match existing style, even if you'd do it differently.
 
 ## 4. Goal-Driven Execution

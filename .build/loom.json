@@ -1,21 +1,21 @@
 {
   "$schema": "./loom.schema.json",
   "workspace": {
-    "solution": "Terminal.Gui.Stanza.slnx",
+    "solution": "Stanza.TerminalGui.slnx",
     "artifactsPath": ".artifacts",
     "cleanDirectories": [],
-    "enableNugetUpload": false,
+    "enableNugetUpload": true,
     "enableGithubRelease": false,
     "defaultPreReleaseIdentifiers": "preview.0",
     "enableVelopackRelease": false
   },
   "artifacts": {
-    "Terminal.Gui.Stanza": {
-      "project": "src\\Terminal.Gui.Stanza\\Terminal.Gui.Stanza.csproj",
+    "Stanza.TerminalGui": {
+      "project": "src\\Stanza.TerminalGui\\Stanza.TerminalGui.csproj",
       "type": "Nuget"
     },
-    "Terminal.Gui.Stanza.Generators": {
-      "project": "src\\Terminal.Gui.Stanza.Generators\\Terminal.Gui.Stanza.Generators.csproj",
+    "Stanza.TerminalGui.Generators": {
+      "project": "src\\Stanza.TerminalGui.Generators\\Stanza.TerminalGui.Generators.csproj",
       "type": "Nuget"
     }
   },

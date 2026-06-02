@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Verify" />
+    <PackageReference Include="Verify.SourceGenerators" />
+    <PackageReference Include="Verify.TUnit" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Terminal.Gui" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj" />
+    <ProjectReference Include="..\Stanza.TerminalGui\Stanza.TerminalGui.csproj" />
+  </ItemGroup>
+</Project>

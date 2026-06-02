@@ -16,7 +16,7 @@ Build a layout dependency graph during parsing and topologically sort subviews b
 
 The current implementation does this in three steps:
 
-1. `TuiViewParser` records layout constraints from synthetic members like `Below` and `RightOf`.
+1. `StanzaViewParser` records layout constraints from synthetic members like `Below` and `RightOf`.
 2. The parser also performs AST-based dependency detection for ordinary assignments whose expressions reference sibling view identifiers.
 3. `DependencyResolver` uses Kahn's algorithm to produce a safe instantiation order, and `InitializeComponentEmitter` emits control construction before property assignment and hierarchy insertion.
 

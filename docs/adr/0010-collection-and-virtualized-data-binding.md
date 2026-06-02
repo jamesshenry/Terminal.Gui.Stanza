@@ -12,7 +12,7 @@ Stanza needs a declarative way to bind ViewModel collections to these flat sourc
 
 ## Decision
 
-Provide pre-built, generic adapter implementations of `IListDataSource` and `ITableSource` inside `Terminal.Gui.Stanza` that bridge `ObservableCollection<T>` directly to Terminal.Gui views:
+Provide pre-built, generic adapter implementations of `IListDataSource` and `ITableSource` inside `Stanza.TerminalGui` that bridge `ObservableCollection<T>` directly to Terminal.Gui views:
 
 1. Expose a `BindItemsSource` placeholder on list views.
 2. The runtime library provides `StanzaListDataSource<T>` which implements `IListDataSource` and automatically listens to `INotifyCollectionChanged` events.

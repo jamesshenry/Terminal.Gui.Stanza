@@ -14,11 +14,11 @@ Use a layered validation strategy with an active compile-time diagnostic verific
 
 ### Verification Layers
 
-1. Snapshot verification in `Terminal.Gui.Stanza.Generators.Tests`
+1. Snapshot verification in `Stanza.TerminalGui.Generators.Tests`
    - validates the exact emitted source shape for representative inputs
 2. Compilation validation in the snapshot test harness
    - generated trees are added back into the compilation and checked for Roslyn errors
-3. End-to-end runtime tests in `Terminal.Gui.Stanza.Tests`
+3. End-to-end runtime tests in `Stanza.TerminalGui.Tests`
    - verify key observable behaviors such as initialization and two-way text binding
 
 ### Diagnostics Policy

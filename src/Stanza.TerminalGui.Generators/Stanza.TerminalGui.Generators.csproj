@@ -26,4 +26,8 @@
     />
     <Compile Include="..\Stanza.TerminalGui\IR\ViewDeclaration.cs" Link="IR\ViewDeclaration.cs" />
   </ItemGroup>
+  <ItemGroup>
+  <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+  <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+</ItemGroup>
 </Project>

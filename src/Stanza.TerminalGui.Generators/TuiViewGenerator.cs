@@ -12,7 +12,7 @@ public class TuiViewGenerator : IIncrementalGenerator
         id: "STN001",
         title: "Circular layout dependency",
         messageFormat: "Circular layout dependency detected in '{0}'. Layout order may be unstable.",
-        category: "Stanza.Generator",
+        category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );

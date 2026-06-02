@@ -4,7 +4,7 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.ClusterExplorer;
 
-[TuiView<ClusterExplorerViewModel>]
+[StanzaView<ClusterExplorerViewModel>]
 public partial class ResourceMeterWidget : View
 {
     public Label MeterHeaderLabel { get; private set; } = new() { Text = "CPU utilization: " };
@@ -17,7 +17,7 @@ public partial class ResourceMeterWidget : View
         };
 }
 
-[TuiView<ClusterExplorerViewModel>]
+[StanzaView<ClusterExplorerViewModel>]
 public partial class RamMeterWidget : View
 {
     public Label MeterHeaderLabel { get; private set; } = new() { Text = "RAM utilization: " };

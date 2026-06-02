@@ -11,7 +11,7 @@ public partial class SimpleViewModel : ObservableObject
     public partial string Name { get; set; } = "John";
 }
 
-[TuiView<SimpleViewModel>(Title = "Simple Form")]
+[StanzaView<SimpleViewModel>(Title = "Simple Form")]
 public partial class SimpleFormView : View
 {
     public Label TitleLabel { get; private set; } = new() { Text = "Form" };

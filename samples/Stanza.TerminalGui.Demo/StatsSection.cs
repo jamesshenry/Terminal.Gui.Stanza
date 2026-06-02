@@ -3,7 +3,7 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.Demo;
 
-[TuiView<DashboardViewModel>]
+[StanzaView<DashboardViewModel>]
 public partial class StatsSection : FrameView
 {
     public StatsSection()

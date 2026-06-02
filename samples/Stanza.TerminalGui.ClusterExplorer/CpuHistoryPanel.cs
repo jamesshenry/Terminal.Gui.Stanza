@@ -6,7 +6,7 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.ClusterExplorer;
 
-[TuiView<ClusterExplorerViewModel>]
+[StanzaView<ClusterExplorerViewModel>]
 public partial class CpuHistoryPanel : FrameView
 {
     private ScatterSeries? _cpuSeries;

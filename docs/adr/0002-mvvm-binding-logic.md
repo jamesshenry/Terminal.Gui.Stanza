@@ -18,7 +18,7 @@ Adopt a generated mixin model for MVVM support:
 2. `BindingExtensions` provides the reusable runtime primitives:
    - generic one-way and two-way binding helpers
    - view-specific adapters such as `ApplyBindText`, `ApplyBindChecked`, `ApplyBindCommand`, `ApplyBindVisible`, and `ApplyBindEnabled`
-3. `[TuiView<TViewModel>]` or constructor/base-type inference tells the generator which view-model type to target.
+3. `[StanzaView<TViewModel>]` or constructor/base-type inference tells the generator which view-model type to target.
 4. The generator emits these members into the partial view when a view-model type is present:
    - `ViewModel` property with reference-equality guards to prevent redundant layout passes
    - `BindingContext` property backed by a mutable field, allowing context recreation on ViewModel re-binding

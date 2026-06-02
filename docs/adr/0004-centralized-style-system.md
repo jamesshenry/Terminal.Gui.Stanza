@@ -10,7 +10,7 @@ Early design notes proposed a compile-time style system where views could opt in
 
 Today the generator only understands:
 
-- class-level view metadata via `[TuiView]`
+- class-level view metadata via `[StanzaView]`
 - per-control property assignments
 - synthetic layout members
 - synthetic binding members

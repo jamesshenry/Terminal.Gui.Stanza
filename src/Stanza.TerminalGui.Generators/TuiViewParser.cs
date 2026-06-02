@@ -9,18 +9,18 @@ using Stanza.TerminalGui.IR;
 
 namespace Stanza.TerminalGui.Generators;
 
-internal class TuiViewParser
+internal class StanzaViewParser
 {
-    private readonly INamedTypeSymbol _tuiViewAttributeSymbol;
-    private readonly INamedTypeSymbol? _genericTuiViewAttributeSymbol;
+    private readonly INamedTypeSymbol _stanzaViewAttributeSymbol;
+    private readonly INamedTypeSymbol? _genericStanzaViewAttributeSymbol;
 
-    public TuiViewParser(
-        INamedTypeSymbol tuiViewAttributeSymbol,
-        INamedTypeSymbol? genericTuiViewAttributeSymbol
+    public StanzaViewParser(
+        INamedTypeSymbol stanzaViewAttributeSymbol,
+        INamedTypeSymbol? genericStanzaViewAttributeSymbol
     )
     {
-        _tuiViewAttributeSymbol = tuiViewAttributeSymbol;
-        _genericTuiViewAttributeSymbol = genericTuiViewAttributeSymbol;
+        _stanzaViewAttributeSymbol = stanzaViewAttributeSymbol;
+        _genericStanzaViewAttributeSymbol = genericStanzaViewAttributeSymbol;
     }
 
     public ViewDeclaration? Parse(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
@@ -162,54 +162,54 @@ internal class TuiViewParser
 
     private string? GetTitle(INamedTypeSymbol classSymbol)
     {
-        var tuiViewAttr = classSymbol
+        var stanzaViewAttr = classSymbol
             .GetAttributes()
             .FirstOrDefault(a =>
-                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol)
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _stanzaViewAttributeSymbol)
                 || (
-                    _genericTuiViewAttributeSymbol != null
+                    _genericStanzaViewAttributeSymbol != null
                     && a.AttributeClass != null
                     && SymbolEqualityComparer.Default.Equals(
                         a.AttributeClass.OriginalDefinition,
-                        _genericTuiViewAttributeSymbol
+                        _genericStanzaViewAttributeSymbol
                     )
                 )
             );
 
-        if (tuiViewAttr == null)
+        if (stanzaViewAttr == null)
             return null;
 
-        var namedArg = tuiViewAttr.NamedArguments.FirstOrDefault(a => a.Key == "Title");
+        var namedArg = stanzaViewAttr.NamedArguments.FirstOrDefault(a => a.Key == "Title");
 
         return namedArg.Key == "Title" ? namedArg.Value.Value as string : null;
     }
 
     private INamedTypeSymbol? GetViewModelSymbol(INamedTypeSymbol classSymbol)
     {
-        var tuiViewAttr = classSymbol
+        var stanzaViewAttr = classSymbol
             .GetAttributes()
             .FirstOrDefault(a =>
-                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _tuiViewAttributeSymbol)
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, _stanzaViewAttributeSymbol)
                 || (
-                    _genericTuiViewAttributeSymbol != null
+                    _genericStanzaViewAttributeSymbol != null
                     && a.AttributeClass != null
                     && SymbolEqualityComparer.Default.Equals(
                         a.AttributeClass.OriginalDefinition,
-                        _genericTuiViewAttributeSymbol
+                        _genericStanzaViewAttributeSymbol
                     )
                 )
             );
 
-        if (tuiViewAttr != null)
+        if (stanzaViewAttr != null)
         {
             // 1. Resolve TViewModel from generic attribute type argument first
             if (
-                tuiViewAttr.AttributeClass != null
-                && tuiViewAttr.AttributeClass.IsGenericType
-                && tuiViewAttr.AttributeClass.TypeArguments.Length > 0
+                stanzaViewAttr.AttributeClass != null
+                && stanzaViewAttr.AttributeClass.IsGenericType
+                && stanzaViewAttr.AttributeClass.TypeArguments.Length > 0
             )
             {
-                return tuiViewAttr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
+                return stanzaViewAttr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
             }
         }
 

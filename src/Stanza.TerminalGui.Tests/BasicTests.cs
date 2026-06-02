@@ -126,7 +126,7 @@ public partial class BindingTests
 }
 
 
-// [TuiView<DemoViewModel>(Title = "Stanza MVVM Demo")]
+// [StanzaView<DemoViewModel>(Title = "Stanza MVVM Demo")]
 // public partial class DemoView : View
 // {
 //     public Label TitleLabel { get; private set; } = new()

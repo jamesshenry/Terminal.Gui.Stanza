@@ -17,9 +17,9 @@ That means two architectural decisions have to stay aligned:
 
 The generator treats view-model discovery as an ordered inference process.
 
-`TuiViewParser.GetViewModelSymbol(...)` resolves the target type in this precedence order:
+`StanzaViewParser.GetViewModelSymbol(...)` resolves the target type in this precedence order:
 
-1. explicit generic attribute: `[TuiView<TViewModel>]`
+1. explicit generic attribute: `[StanzaView<TViewModel>]`
 2. constructor inference: a constructor parameter whose type implements `System.ComponentModel.INotifyPropertyChanged`
 3. generic base-type inference: the first generic argument of the authored base type
 
@@ -38,7 +38,7 @@ Having both parameterless and parameterized constructors ensures full compatibil
 
 The `ViewModel` setter is the initialization trigger: assigning a non-null, non-equal value calls `InitializeComponent()`.
 
-When the `[TuiView]` or `[TuiView<TViewModel>]` attribute carries a `Title` value, the emitter assigns it in the generated parameterless constructor, eliminating the handwritten constructor override that would otherwise be required for static window titles.
+When the `[StanzaView]` or `[StanzaView<TViewModel>]` attribute carries a `Title` value, the emitter assigns it in the generated parameterless constructor, eliminating the handwritten constructor override that would otherwise be required for static window titles.
 
 ## Consequences
 
@@ -51,4 +51,4 @@ When the `[TuiView]` or `[TuiView<TViewModel>]` attribute carries a `Title` valu
 
 ### Negative
 
-- Non-generic `[TuiView]` only works when inference succeeds; the attribute alone is not enough.
+- Non-generic `[StanzaView]` only works when inference succeeds; the attribute alone is not enough.

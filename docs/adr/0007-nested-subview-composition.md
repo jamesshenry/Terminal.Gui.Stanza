@@ -14,7 +14,7 @@ The project therefore needs a compile-time rule for deciding when a child view s
 
 Treat compatible nested subviews as same-view-model components and propagate the parent `ViewModel` during generated initialization.
 
-`TuiViewParser` identifies compatible subviews with `HasViewModelPropertyOfType(...)` using a two-tier heuristic:
+`StanzaViewParser` identifies compatible subviews with `HasViewModelPropertyOfType(...)` using a two-tier heuristic:
 
 1. for source types, rerun the same view-model discovery logic used for top-level views
 2. for referenced binaries, look for a `ViewModel` property whose type exactly matches the parent's inferred view-model type

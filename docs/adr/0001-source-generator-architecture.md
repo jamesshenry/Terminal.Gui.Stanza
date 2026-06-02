@@ -20,14 +20,14 @@ Use a two-layer production architecture:
 
 1. `Stanza.TerminalGui`
    Exposes the public authoring surface used by application code:
-   - `[TuiView]` and `[TuiView<TViewModel>]`
+   - `[StanzaView]` and `[StanzaView<TViewModel>]`
    - layout and binding extension members such as `Below`, `RightOf`, and `BindText`
    - runtime binding helpers such as `BindingContext` and `BindingExtensions`
    - IR records in the `Stanza.TerminalGui.IR` namespace shared with the generator implementation
 
 2. `Stanza.TerminalGui.Generators`
    Owns compile-time transformation:
-   - `TuiViewParser` converts annotated classes into IR records
+   - `StanzaViewParser` converts annotated classes into IR records
    - `DependencyResolver` computes instantiation order from layout dependencies
    - `InitializeComponentEmitter` writes the generated partial class members and initialization code
 

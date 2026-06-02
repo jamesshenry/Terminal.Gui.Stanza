@@ -11,7 +11,7 @@ A declarative, attribute-based UI engine for **Terminal.Gui v2**, targeting .NET
 
 ## Project Structure
 
-- `src/Stanza.TerminalGui/` — Consumer-facing runtime and authoring surface. Contains `[TuiView]`, IR records, `BindingContext`, binding helpers, and layout extension members.
+- `src/Stanza.TerminalGui/` — Consumer-facing runtime and authoring surface. Contains `[StanzaView]`, IR records, `BindingContext`, binding helpers, and layout extension members.
 - `src/Stanza.TerminalGui.Generators/` — The Roslyn `IIncrementalGenerator`. Contains the parser, dependency resolver, and C# emitter.
 - `src/Stanza.TerminalGui.Generators.Tests/` — Snapshot-driven generator tests that also recompile generated output.
 - `src/Stanza.TerminalGui.Tests/` — End-to-end runtime tests for generated binding behavior.

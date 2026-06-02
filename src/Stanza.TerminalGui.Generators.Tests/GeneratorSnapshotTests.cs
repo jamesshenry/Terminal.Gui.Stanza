@@ -26,7 +26,7 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
     public string Name { get; set; }
 }
 
-[TuiView]
+[StanzaView]
 public partial class MyView : View
 {
     public MyView(MyViewModel viewModel)
@@ -56,7 +56,7 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
     public string Name { get; set; }
 }
 
-[TuiView<MyViewModel>]
+[StanzaView<MyViewModel>]
 public partial class MyView : View
 {
     public Label MyLabel { get; set; } = new() { Text = "Hello" };
@@ -89,7 +89,7 @@ public partial class DashboardViewModel : CommunityToolkit.Mvvm.ComponentModel.O
     public string Summary { get; set; }
 }
 
-[TuiView<DashboardViewModel>]
+[StanzaView<DashboardViewModel>]
 public partial class DashboardView : Window
 {
     public MyLabel LeftPanel { get; set; } = new();
@@ -124,7 +124,7 @@ public partial class CircularVm : CommunityToolkit.Mvvm.ComponentModel.Observabl
 {
 }
 
-[TuiView<CircularVm>]
+[StanzaView<CircularVm>]
 public partial class CircularView : View
 {
     public View LeftPanel { get; set; } = new() { Below = nameof(RightPanel) };
@@ -159,7 +159,7 @@ public class NameofLabel : View
     public string BindText { get; set; } = string.Empty;
 }
 
-[TuiView<NameofVm>]
+[StanzaView<NameofVm>]
 public partial class NameofView : View
 {
     public NameofLabel TitleLabel { get; set; } = new();
@@ -193,7 +193,7 @@ public class ManualInpcVm : INotifyPropertyChanged
     public string Name { get; set; } = string.Empty;
 }
 
-[TuiView]
+[StanzaView]
 public partial class InpcView : View
 {
     public InpcView(ManualInpcVm vm)
@@ -220,7 +220,7 @@ public partial class TopologyVm : CommunityToolkit.Mvvm.ComponentModel.Observabl
 {
 }
 
-[TuiView<TopologyVm>]
+[StanzaView<TopologyVm>]
 public partial class DisjointView : View
 {
     public Label A { get; set; } = new() { Text = "A" };
@@ -247,7 +247,7 @@ public partial class TopologyVm : CommunityToolkit.Mvvm.ComponentModel.Observabl
 {
 }
 
-[TuiView<TopologyVm>]
+[StanzaView<TopologyVm>]
 public partial class LinearView : View
 {
     public Label A { get; set; } = new();
@@ -279,7 +279,7 @@ public partial class TopologyVm : CommunityToolkit.Mvvm.ComponentModel.Observabl
 {
 }
 
-[TuiView<TopologyVm>]
+[StanzaView<TopologyVm>]
 public partial class BranchingView : View
 {
     public Label A { get; set; } = new();
@@ -311,7 +311,7 @@ public partial class TitleVm : CommunityToolkit.Mvvm.ComponentModel.ObservableOb
 {
 }
 
-[TuiView<TitleVm>(Title = "My Form")]
+[StanzaView<TitleVm>(Title = "My Form")]
 public partial class TitleWindow : Window
 {
 }
@@ -341,7 +341,7 @@ public class LayoutLabel : View
     public string Below { get; set; } = string.Empty;
 }
 
-[TuiView<LayoutVm>]
+[StanzaView<LayoutVm>]
 public partial class LayoutView : View
 {
     public LayoutLabel TitleLabel { get; set; } = new();
@@ -378,7 +378,7 @@ public class SyntheticLabel : View
     public string Below { get; set; } = string.Empty;
 }
 
-[TuiView<SyntheticVm>]
+[StanzaView<SyntheticVm>]
 public partial class SyntheticView : View
 {
     public SyntheticLabel OtherLabel { get; set; } = new();
@@ -413,7 +413,7 @@ public class BindingLabel : View
     public string BindText { get; set; } = string.Empty;
 }
 
-[TuiView<ReadOnlyVm>]
+[StanzaView<ReadOnlyVm>]
 public partial class ReadOnlyBindingView : View
 {
     public BindingLabel NameLabel { get; set; } = new() { BindText = nameof(ReadOnlyVm.Name) };
@@ -495,7 +495,7 @@ public static class TestHelper
     ) RunGenerator(string source)
     {
         // Force the JIT/runtime to load the dependent assemblies into the AppDomain
-        _ = typeof(Stanza.TerminalGui.TuiViewAttribute).Assembly;
+        _ = typeof(Stanza.TerminalGui.StanzaViewAttribute).Assembly;
         _ = typeof(CommunityToolkit.Mvvm.ComponentModel.ObservableObject).Assembly;
         _ = typeof(Terminal.Gui.Views.Label).Assembly;
         _ = typeof(Stanza.TerminalGui.IStanzaView<>).Assembly;
@@ -520,7 +520,7 @@ public static class TestHelper
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
         );
 
-        var generator = new TuiViewGenerator();
+        var generator = new StanzaViewGenerator();
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new[] { generator.AsSourceGenerator() },

@@ -2,4 +2,4 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-STN001 | Usage | Error | TuiViewGenerator
+STN001 | Usage | Error | StanzaViewGenerator

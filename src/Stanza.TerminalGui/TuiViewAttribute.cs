@@ -1,7 +1,7 @@
 ﻿namespace Stanza.TerminalGui;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-public class TuiViewAttribute : Attribute
+public class StanzaViewAttribute : Attribute
 {
     /// <summary>
     /// Static title assigned to the view in the generated parameterless constructor.
@@ -12,5 +12,5 @@ public class TuiViewAttribute : Attribute
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-public sealed class TuiViewAttribute<TViewModel> : TuiViewAttribute
+public sealed class StanzaViewAttribute<TViewModel> : StanzaViewAttribute
     where TViewModel : System.ComponentModel.INotifyPropertyChanged { }

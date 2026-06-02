@@ -4,7 +4,7 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.ClusterExplorer;
 
-[TuiView<ClusterExplorerViewModel>]
+[StanzaView<ClusterExplorerViewModel>]
 public partial class NodeGridPanel : FrameView
 {
     // Level 3 Subview: Handled recursively

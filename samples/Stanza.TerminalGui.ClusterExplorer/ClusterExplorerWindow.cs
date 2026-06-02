@@ -4,7 +4,7 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.ClusterExplorer;
 
-[TuiView<ClusterExplorerViewModel>]
+[StanzaView<ClusterExplorerViewModel>]
 public partial class ClusterExplorerWindow : Window
 {
     public ClusterExplorerWindow()

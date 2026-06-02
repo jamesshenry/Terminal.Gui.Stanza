@@ -13,7 +13,7 @@ public partial class Phase1ViewModel : ObservableObject
     public partial string Name { get; set; } = string.Empty;
 }
 
-[TuiView<Phase1ViewModel>(Title = "Phase 1 View")]
+[StanzaView<Phase1ViewModel>(Title = "Phase 1 View")]
 public partial class Phase1LifecycleView : View
 {
     public Label HeaderLabel { get; private set; } = new() { Text = "Header" };
@@ -22,7 +22,7 @@ public partial class Phase1LifecycleView : View
         new() { BindText = nameof(Phase1ViewModel.Name), Below = nameof(HeaderLabel) };
 }
 
-[TuiView<Phase1ViewModel>]
+[StanzaView<Phase1ViewModel>]
 public partial class Phase1ManualChildView : View
 {
     public Label GeneratedLabel { get; private set; } = new() { Text = "Generated" };

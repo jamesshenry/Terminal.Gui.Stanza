@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Stanza.TerminalGui.Generators;
 
 [Generator(LanguageNames.CSharp)]
-public class TuiViewGenerator : IIncrementalGenerator
+public class StanzaViewGenerator : IIncrementalGenerator
 {
     private static readonly DiagnosticDescriptor CircularLayoutDiagnostic = new(
         id: "STN001",
@@ -37,19 +37,19 @@ public class TuiViewGenerator : IIncrementalGenerator
             {
                 var (compilation, classes) = source;
 
-                var tuiViewAttributeSymbol = compilation.GetTypeByMetadataName(
-                    "Stanza.TerminalGui.TuiViewAttribute"
+                var stanzaViewAttributeSymbol = compilation.GetTypeByMetadataName(
+                    "Stanza.TerminalGui.StanzaViewAttribute"
                 );
-                if (tuiViewAttributeSymbol == null)
+                if (stanzaViewAttributeSymbol == null)
                     return;
 
-                var genericTuiViewAttributeSymbol = compilation.GetTypeByMetadataName(
-                    "Stanza.TerminalGui.TuiViewAttribute`1"
+                var genericStanzaViewAttributeSymbol = compilation.GetTypeByMetadataName(
+                    "Stanza.TerminalGui.StanzaViewAttribute`1"
                 );
 
-                var parser = new TuiViewParser(
-                    tuiViewAttributeSymbol,
-                    genericTuiViewAttributeSymbol
+                var parser = new StanzaViewParser(
+                    stanzaViewAttributeSymbol,
+                    genericStanzaViewAttributeSymbol
                 );
                 var resolver = new DependencyResolver();
                 var emitter = new InitializeComponentEmitter();

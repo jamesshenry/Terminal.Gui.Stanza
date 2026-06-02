@@ -1,0 +1,6 @@
+{
+    "csharpier.enableDebugLogs": true,
+    "[csharp]": {
+        "editor.defaultFormatter": "csharpier.csharpier-vscode"
+    }
+}

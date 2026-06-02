@@ -4,7 +4,7 @@
     "solution": "Stanza.TerminalGui.slnx",
     "artifactsPath": ".artifacts",
     "cleanDirectories": [],
-    "enableNugetUpload": false,
+    "enableNugetUpload": true,
     "enableGithubRelease": false,
     "defaultPreReleaseIdentifiers": "preview.0",
     "enableVelopackRelease": false

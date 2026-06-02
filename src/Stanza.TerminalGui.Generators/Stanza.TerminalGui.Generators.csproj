@@ -13,17 +13,17 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Compile shared IR files directly into the analyzer to keep it zero-dependency and netstandard2.0 compatible -->
-    <Compile Include="..\Terminal.Gui.Stanza\BindingMode.cs" Link="BindingMode.cs" />
-    <!-- <Compile Include="..\Terminal.Gui.Stanza\IsExternalInit.cs" Link="IsExternalInit.cs" /> -->
-    <Compile Include="..\Terminal.Gui.Stanza\IR\BindingInfo.cs" Link="IR\BindingInfo.cs" />
+    <Compile Include="..\Stanza.TerminalGui\BindingMode.cs" Link="BindingMode.cs" />
+    <!-- <Compile Include="..\Stanza.TerminalGui\IsExternalInit.cs" Link="IsExternalInit.cs" /> -->
+    <Compile Include="..\Stanza.TerminalGui\IR\BindingInfo.cs" Link="IR\BindingInfo.cs" />
     <Compile
-      Include="..\Terminal.Gui.Stanza\IR\LayoutConstraint.cs"
+      Include="..\Stanza.TerminalGui\IR\LayoutConstraint.cs"
       Link="IR\LayoutConstraint.cs"
     />
     <Compile
-      Include="..\Terminal.Gui.Stanza\IR\PropertyAssignment.cs"
+      Include="..\Stanza.TerminalGui\IR\PropertyAssignment.cs"
       Link="IR\PropertyAssignment.cs"
     />
-    <Compile Include="..\Terminal.Gui.Stanza\IR\ViewDeclaration.cs" Link="IR\ViewDeclaration.cs" />
+    <Compile Include="..\Stanza.TerminalGui\IR\ViewDeclaration.cs" Link="IR\ViewDeclaration.cs" />
   </ItemGroup>
 </Project>

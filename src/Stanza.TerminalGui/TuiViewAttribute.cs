@@ -1,4 +1,4 @@
-﻿namespace Terminal.Gui.Stanza;
+﻿namespace Stanza.TerminalGui;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public class TuiViewAttribute : Attribute

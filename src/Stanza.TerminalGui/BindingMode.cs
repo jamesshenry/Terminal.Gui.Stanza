@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 public enum BindingMode
 {

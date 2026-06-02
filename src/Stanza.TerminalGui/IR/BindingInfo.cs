@@ -1,6 +1,6 @@
-namespace Terminal.Gui.Stanza.IR;
+namespace Stanza.TerminalGui.IR;
 
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 
 public record BindingInfo(
     string OwnerView,

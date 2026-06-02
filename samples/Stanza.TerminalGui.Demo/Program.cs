@@ -1,6 +1,6 @@
 using Terminal.Gui.Drawing;
 
-namespace Terminal.Gui.Stanza.Demo;
+namespace Stanza.TerminalGui.Demo;
 
 public static class Program
 {

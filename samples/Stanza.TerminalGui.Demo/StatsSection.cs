@@ -1,7 +1,7 @@
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
-namespace Terminal.Gui.Stanza.Demo;
+namespace Stanza.TerminalGui.Demo;
 
 [TuiView<DashboardViewModel>]
 public partial class StatsSection : FrameView

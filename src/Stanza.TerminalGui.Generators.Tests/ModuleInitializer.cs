@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using VerifyTests;
 
-namespace Terminal.Gui.Stanza.Generators.Tests;
+namespace Stanza.TerminalGui.Generators.Tests;
 
 public static class ModuleInitializer
 {

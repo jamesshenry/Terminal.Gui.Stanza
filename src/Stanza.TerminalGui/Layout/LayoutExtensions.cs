@@ -1,7 +1,7 @@
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
 
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 /// <summary>
 /// C# 14 extension members for declarative layout DSL.

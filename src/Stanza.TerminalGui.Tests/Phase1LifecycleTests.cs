@@ -1,11 +1,11 @@
 using System.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terminal.Gui;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
-namespace Terminal.Gui.Stanza.Tests;
+namespace Stanza.TerminalGui.Tests;
 
 public partial class Phase1ViewModel : ObservableObject
 {

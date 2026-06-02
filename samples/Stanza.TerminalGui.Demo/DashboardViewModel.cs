@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Terminal.Gui.Stanza.Demo;
+namespace Stanza.TerminalGui.Demo;
 
 public partial class DashboardViewModel : ObservableObject
 {

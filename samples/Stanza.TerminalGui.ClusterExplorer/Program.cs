@@ -1,6 +1,6 @@
 using Terminal.Gui.App;
 
-namespace Terminal.Gui.Stanza.ClusterExplorer;
+namespace Stanza.TerminalGui.ClusterExplorer;
 
 public static class Program
 {

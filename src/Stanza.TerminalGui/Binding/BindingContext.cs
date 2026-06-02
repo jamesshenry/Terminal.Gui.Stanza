@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 /// <summary>
 /// Manages the lifecycle of multiple bindings, providing centralized cleanup.

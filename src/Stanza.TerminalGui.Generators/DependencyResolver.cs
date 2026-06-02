@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Terminal.Gui.Stanza.IR;
+using Stanza.TerminalGui.IR;
 
-namespace Terminal.Gui.Stanza.Generators;
+namespace Stanza.TerminalGui.Generators;
 
 internal class DependencyResolver
 {

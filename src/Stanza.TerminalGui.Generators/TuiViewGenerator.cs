@@ -3,7 +3,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Terminal.Gui.Stanza.Generators;
+namespace Stanza.TerminalGui.Generators;
 
 [Generator(LanguageNames.CSharp)]
 public class TuiViewGenerator : IIncrementalGenerator
@@ -38,13 +38,13 @@ public class TuiViewGenerator : IIncrementalGenerator
                 var (compilation, classes) = source;
 
                 var tuiViewAttributeSymbol = compilation.GetTypeByMetadataName(
-                    "Terminal.Gui.Stanza.TuiViewAttribute"
+                    "Stanza.TerminalGui.TuiViewAttribute"
                 );
                 if (tuiViewAttributeSymbol == null)
                     return;
 
                 var genericTuiViewAttributeSymbol = compilation.GetTypeByMetadataName(
-                    "Terminal.Gui.Stanza.TuiViewAttribute`1"
+                    "Stanza.TerminalGui.TuiViewAttribute`1"
                 );
 
                 var parser = new TuiViewParser(

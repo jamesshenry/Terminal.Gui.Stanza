@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 public interface IStanzaView<TViewModel> : IDisposable
     where TViewModel : System.ComponentModel.INotifyPropertyChanged

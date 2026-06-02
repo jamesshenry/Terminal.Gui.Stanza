@@ -6,9 +6,9 @@ namespace TestNamespace;
 using System.Linq;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 
-partial class MyView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.MyViewModel>
+partial class MyView : Stanza.TerminalGui.IStanzaView<TestNamespace.MyViewModel>
 {
     public MyView() : base()
     {

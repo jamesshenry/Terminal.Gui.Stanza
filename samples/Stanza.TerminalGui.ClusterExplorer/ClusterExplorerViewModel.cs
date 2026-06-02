@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace Terminal.Gui.Stanza.ClusterExplorer;
+namespace Stanza.TerminalGui.ClusterExplorer;
 
 public partial class ClusterExplorerViewModel : ObservableObject, IDisposable
 {

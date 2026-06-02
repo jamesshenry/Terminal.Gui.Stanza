@@ -1,8 +1,8 @@
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
-namespace Terminal.Gui.Stanza.ClusterExplorer;
+namespace Stanza.TerminalGui.ClusterExplorer;
 
 [TuiView<ClusterExplorerViewModel>]
 public partial class NodeHealthCard : FrameView

@@ -4,7 +4,7 @@ using System.Windows.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 public static class BindingExtensions
 {

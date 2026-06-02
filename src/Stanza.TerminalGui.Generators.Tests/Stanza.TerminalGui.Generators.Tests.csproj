@@ -15,7 +15,7 @@
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Terminal.Gui.Stanza.Generators\Terminal.Gui.Stanza.Generators.csproj" />
-    <ProjectReference Include="..\Terminal.Gui.Stanza\Terminal.Gui.Stanza.csproj" />
+    <ProjectReference Include="..\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj" />
+    <ProjectReference Include="..\Stanza.TerminalGui\Stanza.TerminalGui.csproj" />
   </ItemGroup>
 </Project>

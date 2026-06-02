@@ -7,9 +7,9 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Terminal.Gui.Stanza\Terminal.Gui.Stanza.csproj" />
+    <ProjectReference Include="..\..\src\Stanza.TerminalGui\Stanza.TerminalGui.csproj" />
     <ProjectReference
-      Include="..\..\src\Terminal.Gui.Stanza.Generators\Terminal.Gui.Stanza.Generators.csproj"
+      Include="..\..\src\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj"
       OutputItemType="Analyzer"
       ReferenceOutputAssembly="false"
     />

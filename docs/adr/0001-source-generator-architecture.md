@@ -18,14 +18,14 @@ Earlier drafts assumed a separate abstractions package plus a runtime base class
 
 Use a two-layer production architecture:
 
-1. `Terminal.Gui.Stanza`
+1. `Stanza.TerminalGui`
    Exposes the public authoring surface used by application code:
    - `[TuiView]` and `[TuiView<TViewModel>]`
    - layout and binding extension members such as `Below`, `RightOf`, and `BindText`
    - runtime binding helpers such as `BindingContext` and `BindingExtensions`
-   - IR records in the `Terminal.Gui.Stanza.IR` namespace shared with the generator implementation
+   - IR records in the `Stanza.TerminalGui.IR` namespace shared with the generator implementation
 
-2. `Terminal.Gui.Stanza.Generators`
+2. `Stanza.TerminalGui.Generators`
    Owns compile-time transformation:
    - `TuiViewParser` converts annotated classes into IR records
    - `DependencyResolver` computes instantiation order from layout dependencies
@@ -43,5 +43,5 @@ Keep the generator architecture explicitly IR-driven so Roslyn analysis stays is
 
 ### Negative
 
-- The `Terminal.Gui.Stanza` project carries both runtime concerns and the public authoring contract, so the namespace name `Abstractions` is logical rather than physical.
+- The `Stanza.TerminalGui` project carries both runtime concerns and the public authoring contract, so the namespace name `Abstractions` is logical rather than physical.
 - Generator and runtime must stay in lockstep because synthetic members such as `BindText` and `Below` only make sense when both pieces are present.

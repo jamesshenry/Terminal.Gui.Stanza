@@ -6,9 +6,9 @@ namespace TestNamespace;
 using System.Linq;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 
-partial class DashboardView : Terminal.Gui.Stanza.IStanzaView<TestNamespace.DashboardViewModel>
+partial class DashboardView : Stanza.TerminalGui.IStanzaView<TestNamespace.DashboardViewModel>
 {
     public DashboardView() : base()
     {

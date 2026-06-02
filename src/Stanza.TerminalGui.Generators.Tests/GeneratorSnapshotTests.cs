@@ -2,11 +2,11 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Terminal.Gui;
-using Terminal.Gui.Stanza.Generators;
+using Stanza.TerminalGui.Generators;
 using VerifyTests;
 using VerifyTUnit;
 
-namespace Terminal.Gui.Stanza.Generators.Tests;
+namespace Stanza.TerminalGui.Generators.Tests;
 
 public class GeneratorSnapshotTests
 {
@@ -14,8 +14,8 @@ public class GeneratorSnapshotTests
     public Task GeneratesCorrectly()
     {
         var source = """
-using Terminal.Gui.Stanza;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
+using Stanza.TerminalGui;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
 
@@ -44,8 +44,8 @@ public partial class MyView : View
     public Task GeneratesWithGenericAttribute()
     {
         var source = """
-using Terminal.Gui.Stanza;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
+using Stanza.TerminalGui;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
 
@@ -70,8 +70,8 @@ public partial class MyView : View
     public Task GeneratesComplexLayouts()
     {
         var source = """
-using Terminal.Gui.Stanza;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
+using Stanza.TerminalGui;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui;
@@ -113,7 +113,7 @@ public partial class DashboardView : Window
     public async Task ReportsCircularLayoutDependency_AsStn001Error()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -142,7 +142,7 @@ public partial class CircularView : View
     public async Task SemanticNameof_Variants_CompileSuccessfully()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui;
 using Terminal.Gui.ViewBase;
 
@@ -182,7 +182,7 @@ public partial class NameofView : View
     {
         var source = """
 using System.ComponentModel;
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
@@ -210,7 +210,7 @@ public partial class InpcView : View
     public async Task Topology_DisjointViews_PreservesAll()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -237,7 +237,7 @@ public partial class DisjointView : View
     public async Task Topology_LinearDependencies_OrdersAThenBThenC()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -269,7 +269,7 @@ public partial class LinearView : View
     public async Task Topology_BranchingDependencies_PlacesRootFirst()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -302,7 +302,7 @@ public partial class BranchingView : View
     public async Task TitleAttribute_EmitsTitleAssignment_InGeneratedParameterlessCtor()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
@@ -327,7 +327,7 @@ public partial class TitleWindow : Window
     public async Task LayoutConstraint_EmitsAssignmentOnOwnerControl()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
@@ -364,7 +364,7 @@ public partial class LayoutView : View
     public async Task SyntheticBelow_Assignment_IsInterceptedAndTranslated()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
@@ -398,7 +398,7 @@ public partial class SyntheticView : View
     public async Task ReadOnlyBindText_DegradesToOneWay_NoSetterLambdaEmitted()
     {
         var source = """
-using Terminal.Gui.Stanza;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 
 namespace TestNamespace;
@@ -495,10 +495,10 @@ public static class TestHelper
     ) RunGenerator(string source)
     {
         // Force the JIT/runtime to load the dependent assemblies into the AppDomain
-        _ = typeof(Terminal.Gui.Stanza.TuiViewAttribute).Assembly;
+        _ = typeof(Stanza.TerminalGui.TuiViewAttribute).Assembly;
         _ = typeof(CommunityToolkit.Mvvm.ComponentModel.ObservableObject).Assembly;
         _ = typeof(Terminal.Gui.Views.Label).Assembly;
-        _ = typeof(Terminal.Gui.Stanza.IStanzaView<>).Assembly;
+        _ = typeof(Stanza.TerminalGui.IStanzaView<>).Assembly;
 
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(
             source,

@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 /// <summary>
 /// A simple disposable action that executes a delegate when disposed.

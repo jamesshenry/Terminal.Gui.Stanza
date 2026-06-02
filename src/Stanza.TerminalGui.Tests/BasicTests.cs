@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
-namespace Terminal.Gui.Stanza.Tests;
+namespace Stanza.TerminalGui.Tests;
 
 public partial class BindingTests
 {
@@ -131,7 +131,7 @@ public partial class BindingTests
 // {
 //     public Label TitleLabel { get; private set; } = new()
 //     {
-//         Text = "Terminal.Gui.Stanza Declarative Demo",
+//         Text = "Stanza.TerminalGui Declarative Demo",
 //         Width = Dim.Auto(),
 //         Height = 1
 //     };
@@ -187,7 +187,7 @@ public partial class BindingTests
 //     [ObservableProperty]
 //     public partial bool ShowGreetings { get; set; } = true;
 
-//     public string GreetingMessage => $"Hello, {Name}! Welcome to Terminal.Gui.Stanza!";
+//     public string GreetingMessage => $"Hello, {Name}! Welcome to Stanza.TerminalGui!";
 
 //     partial void OnNameChanged(string value)
 //     {

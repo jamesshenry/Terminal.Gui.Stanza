@@ -1,7 +1,7 @@
-namespace Terminal.Gui.Stanza;
+namespace Stanza.TerminalGui;
 
 /// <summary>
-/// Global configuration for Terminal.Gui.Stanza, including logging setup.
+/// Global configuration for Stanza.TerminalGui, including logging setup.
 /// </summary>
 public static class StanzaConfig
 {

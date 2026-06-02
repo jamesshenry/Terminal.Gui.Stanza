@@ -4,10 +4,10 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Terminal.Gui.Stanza;
-using Terminal.Gui.Stanza.IR;
+using Stanza.TerminalGui;
+using Stanza.TerminalGui.IR;
 
-namespace Terminal.Gui.Stanza.Generators;
+namespace Stanza.TerminalGui.Generators;
 
 internal class TuiViewParser
 {

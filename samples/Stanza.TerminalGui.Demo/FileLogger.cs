@@ -1,4 +1,4 @@
-namespace Terminal.Gui.Stanza.Demo;
+namespace Stanza.TerminalGui.Demo;
 
 public class FileLogger : ILogger, System.IDisposable
 {

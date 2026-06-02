@@ -1,12 +1,12 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Terminal.Gui.Stanza/Terminal.Gui.Stanza.csproj" />
-    <Project Path="src/Terminal.Gui.Stanza.Tests/Terminal.Gui.Stanza.Tests.csproj" />
-    <Project Path="src/Terminal.Gui.Stanza.Generators/Terminal.Gui.Stanza.Generators.csproj" />
-    <Project Path="src/Terminal.Gui.Stanza.Generators.Tests/Terminal.Gui.Stanza.Generators.Tests.csproj" />
+    <Project Path="src/Stanza.TerminalGui/Stanza.TerminalGui.csproj" />
+    <Project Path="src/Stanza.TerminalGui.Tests/Stanza.TerminalGui.Tests.csproj" />
+    <Project Path="src/Stanza.TerminalGui.Generators/Stanza.TerminalGui.Generators.csproj" />
+    <Project Path="src/Stanza.TerminalGui.Generators.Tests/Stanza.TerminalGui.Generators.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/">
-    <Project Path="samples/Terminal.Gui.Stanza.Demo/Terminal.Gui.Stanza.Demo.csproj" />
-    <Project Path="samples/Terminal.Gui.Stanza.ClusterExplorer/Terminal.Gui.Stanza.ClusterExplorer.csproj" />
+    <Project Path="samples/Stanza.TerminalGui.Demo/Stanza.TerminalGui.Demo.csproj" />
+    <Project Path="samples/Stanza.TerminalGui.ClusterExplorer/Stanza.TerminalGui.ClusterExplorer.csproj" />
   </Folder>
 </Solution>

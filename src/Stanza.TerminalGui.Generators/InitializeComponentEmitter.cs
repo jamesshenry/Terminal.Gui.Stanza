@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Terminal.Gui.Stanza;
-using Terminal.Gui.Stanza.IR;
+using Stanza.TerminalGui;
+using Stanza.TerminalGui.IR;
 
-namespace Terminal.Gui.Stanza.Generators;
+namespace Stanza.TerminalGui.Generators;
 
 internal class InitializeComponentEmitter
 {
@@ -18,12 +18,12 @@ internal class InitializeComponentEmitter
         sb.AppendLine("using System.Linq;");
         sb.AppendLine("using Terminal.Gui;");
         sb.AppendLine("using Terminal.Gui.ViewBase;");
-        sb.AppendLine("using Terminal.Gui.Stanza;");
+        sb.AppendLine("using Stanza.TerminalGui;");
         sb.AppendLine();
         if (!string.IsNullOrEmpty(viewDecl.ViewModelType))
         {
             sb.AppendLine(
-                $"partial class {viewDecl.ClassName} : Terminal.Gui.Stanza.IStanzaView<{viewDecl.ViewModelType}>"
+                $"partial class {viewDecl.ClassName} : Stanza.TerminalGui.IStanzaView<{viewDecl.ViewModelType}>"
             );
             sb.AppendLine("{");
             if (viewDecl.GenerateParameterlessConstructor)

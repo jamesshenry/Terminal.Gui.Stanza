@@ -1,0 +1,29 @@
+{
+  "$schema": "./loom.schema.json",
+  "workspace": {
+    "solution": "Terminal.Gui.Stanza.slnx",
+    "artifactsPath": ".artifacts",
+    "cleanDirectories": [],
+    "enableNugetUpload": false,
+    "enableGithubRelease": false,
+    "defaultPreReleaseIdentifiers": "preview.0",
+    "enableVelopackRelease": false
+  },
+  "artifacts": {
+    "Terminal.Gui.Stanza": {
+      "project": "src\\Terminal.Gui.Stanza\\Terminal.Gui.Stanza.csproj",
+      "type": "Nuget"
+    },
+    "Terminal.Gui.Stanza.Generators": {
+      "project": "src\\Terminal.Gui.Stanza.Generators\\Terminal.Gui.Stanza.Generators.csproj",
+      "type": "Nuget"
+    }
+  },
+  "global": {
+    "target": "Build"
+  },
+  "nuget": {
+    "apiKey": ""
+  },
+  "githubAccessToken": ""
+}

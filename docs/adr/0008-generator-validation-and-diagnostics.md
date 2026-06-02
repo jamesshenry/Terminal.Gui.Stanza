@@ -10,7 +10,7 @@ Stanza is a compile-time transformation system. If parsing, ordering, or emissio
 
 ## Decision
 
-Use a layered validation strategy with minimal custom diagnostics.
+Use a layered validation strategy with an active compile-time diagnostic verification framework.
 
 ### Verification Layers
 
@@ -23,24 +23,22 @@ Use a layered validation strategy with minimal custom diagnostics.
 
 ### Diagnostics Policy
 
-The current generator emits behavior but very few domain-specific diagnostics.
+The generator actively acts as a compile-time static analyzer, reporting explicit compiler diagnostics to prevent silent degradation or invalid layout orders:
 
-- Missing or invalid constructs primarily fail through normal Roslyn compilation.
-- Circular layout dependencies are handled as best-effort ordering in `DependencyResolver`; unresolved nodes are appended rather than rejected.
-- The `[TuiView]` attribute surface is intentionally minimal: only `Title` is defined, and it is fully consumed by the generator. There are no silent no-op parameters.
+- **`STN001` (Error):** Circular layout dependencies are caught inside the parser and reported immediately, halting the build.
+- **`STN002` (Error):** Annotated classes lacking the `partial` modifier are flagged, preventing invalid partial class generation.
+- **`STN003` (Error):** Base classes lacking accessible parameterless constructors are intercepted, ensuring the generated parameterless constructor is safe.
 
-The project therefore treats tests and generated-output review as the primary safety mechanism, with richer diagnostics deferred until the core transformation model stabilizes.
+This diagnostic framework enforces strict safety constraints early in the compilation lifecycle.
 
 ## Consequences
 
 ### Positive
 
-- The validation story is simple and already implemented in the current repository.
+- The validation story is robust and integrated directly into the Roslyn compiler pipeline.
 - Snapshot tests make generator regressions visible at the emitted-source level.
-- The project can evolve the authoring model quickly without maintaining a large custom diagnostic catalog.
+- Invalid architectural shapes (like non-partial classes or layout cycles) fail the build with explicit and actionable compiler messages.
 
 ### Negative
 
-- Some architectural failures degrade silently instead of surfacing as precise diagnostics.
-- Circular dependency cycles produce best-effort output rather than a build error.
-- Debugging certain issues still requires reading generated code or test snapshots rather than relying on analyzer messages.
+- The compiler pipeline carries strict verification constraints that must be maintained across newer Roslyn and language versions.

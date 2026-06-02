@@ -23,7 +23,7 @@ Matching member names are stored in `ViewDeclaration.SubviewsWithViewModel`.
 
 `InitializeComponentEmitter` then emits child setup in this order:
 
-1. instantiate the child view if needed
+1. instantiate the child view if needed, checking for existing views to prevent duplicating manually added elements
 2. assign `child.ViewModel = this.ViewModel` for compatible subviews
 3. apply generated property assignments and bindings
 4. add the child to the parent hierarchy

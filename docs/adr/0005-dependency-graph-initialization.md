@@ -22,7 +22,7 @@ The current implementation does this in three steps:
 
 Generated initialization therefore follows this shape:
 
-1. instantiate controls in dependency order
+1. instantiate controls in dependency order, using a safe check-before-add pattern to prevent duplicate subviews
 2. apply properties and translated layout expressions
 3. wire bindings
 4. add controls to the parent view hierarchy
@@ -36,9 +36,9 @@ Subviews that themselves expose a compatible `ViewModel` property are assigned t
 - Authors can keep view declarations flat and readable.
 - Relative layout references compile into legal, ordered C#.
 - Dependency ordering is centralized and testable independent of Terminal.Gui runtime behavior.
+- Circular layout dependencies are actively detected by the generator and reported as `STN001` compiler errors, preventing infinite rendering loops.
 
 ### Negative
 
-- Cycles are not currently surfaced as diagnostics; unresolved cycles fall back to appending missing views to preserve emission.
 - The dependency model only captures relationships the parser can see in initializer syntax.
 - Initialization order becomes generator-defined rather than purely source-order-defined.

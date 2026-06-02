@@ -20,13 +20,17 @@ Adopt a generated mixin model for MVVM support:
    - view-specific adapters such as `ApplyBindText`, `ApplyBindChecked`, `ApplyBindCommand`, `ApplyBindVisible`, and `ApplyBindEnabled`
 3. `[TuiView<TViewModel>]` or constructor/base-type inference tells the generator which view-model type to target.
 4. The generator emits these members into the partial view when a view-model type is present:
-   - `ViewModel` property
-   - `BindingContext` property
+   - `ViewModel` property with reference-equality guards to prevent redundant layout passes
+   - `BindingContext` property backed by a mutable field, allowing context recreation on ViewModel re-binding
    - convenience `Bind` helper for manual bindings
    - `Dispose(bool)` override that disposes the binding context before delegating to the base class
 5. Generated bindings are emitted inside `InitializeComponent()` and registered through `BindingContext.AddBinding(...)`.
 
-Bindings use `nameof(...)` strings captured from synthetic properties such as `BindText = nameof(MyViewModel.Name)` so authoring remains refactoring-safe.
+The generated `ViewModel` setter enforces a deterministic state machine:
+
+- It disposes of active bindings before replacing the `ViewModel` instance.
+- It instantiates a fresh, empty `BindingContext` during transition.
+- It invokes `InitializeComponent()` if the new reference is non-null, supporting safe dynamic re-binding and null-valued detachment.
 
 ## Consequences
 
@@ -34,11 +38,10 @@ Bindings use `nameof(...)` strings captured from synthetic properties such as `B
 
 - Views are free to inherit from `View`, `Window`, or other Terminal.Gui types rather than a Stanza-specific base class.
 - Binding logic is centralized in runtime helpers instead of being duplicated in emitted code for each control.
-- Cleanup is automatic as long as the generated partial view participates in normal disposal.
+- ViewModels can be reassigned or cleared dynamically at runtime without leaking event subscriptions.
 - The approach works naturally with `INotifyPropertyChanged` view models, including `CommunityToolkit.Mvvm` types.
 
 ### Negative
 
-- Generated `InitializeComponent()` currently runs whenever `ViewModel` is assigned a non-null value, so the implementation assumes a view instance is initialized once rather than repeatedly rebound to different view models.
 - The generated binding lifecycle is implicit, which makes debugging slightly more indirect than explicit handwritten event wiring.
 - Authoring still requires partial classes and the generator/runtime pair to remain compatible.

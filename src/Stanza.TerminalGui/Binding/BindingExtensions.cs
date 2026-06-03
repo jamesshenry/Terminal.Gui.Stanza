@@ -42,29 +42,113 @@ public static class BindingExtensions
         }
     }
 
-    #region Standard Extension Methods (VM -> UI / UI -> VM Master Methods)
+    #region Core Standalone & Thread-Safe Primitives
 
-    public static IDisposable BindOneWay<TViewModel, TValue, TView>(
+    /// <summary>
+    /// Thread-safe binding primitive used to bind a ViewModel property
+    /// to an arbitrary UI action, using the target View as the thread dispatcher [1].
+    /// </summary>
+    public static IDisposable Bind<TViewModel, TValue>(
         this TViewModel viewModel,
-        string propertyName,
-        TView view,
-        System.Func<TViewModel, TValue> vmGetter,
-        System.Action<TView, TValue> uiSetter
+        View dispatcher,
+        Func<TValue> propertyExpression,
+        Action<TValue> updateUi
     )
         where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(propertyName, () => vmGetter(viewModel), val => uiSetter(view, val));
+        return viewModel.Bind(
+            propertyExpression,
+            val =>
+            {
+                if (dispatcher.App != null)
+                {
+                    dispatcher.App.Invoke(() => updateUi(val)); // Marshal safely to UI thread [1]
+                }
+                else
+                {
+                    updateUi(val);
+                }
+            }
+        );
     }
 
-    public static IDisposable BindTwoWay<TViewModel, TValue, TView>(
+    /// <summary>
+    /// Base binding method that extracts property names via compile-time argument expressions.
+    /// </summary>
+    public static IDisposable Bind<T>(
+        this INotifyPropertyChanged viewModel,
+        Func<T> propertyExpression,
+        Action<T> updateUi,
+        [CallerArgumentExpression(nameof(propertyExpression))] string? expression = null
+    )
+    {
+        string propertyName = ExtractPropertyName(expression);
+        return viewModel.Bind(propertyName, propertyExpression, updateUi);
+    }
+
+    /// <summary>
+    /// Underlying reflection-free property subscription handler.
+    /// </summary>
+    public static IDisposable Bind<T>(
+        this INotifyPropertyChanged viewModel,
+        string propertyName,
+        Func<T> propertyExpression,
+        Action<T> updateUi
+    )
+    {
+        viewModel.PropertyChanged += Handler;
+        updateUi(propertyExpression());
+
+        return new DisposableAction(() => viewModel.PropertyChanged -= Handler);
+
+        void Handler(object? sender, PropertyChangedEventArgs e)
+        {
+            if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
+            {
+                updateUi(propertyExpression());
+            }
+        }
+    }
+
+    #endregion
+
+    #region Thread-Safe Master Synchronizers (Internal)
+
+    internal static IDisposable BindOneWay<TViewModel, TValue, TView>(
         this TViewModel viewModel,
         string propertyName,
         TView view,
-        System.Func<TViewModel, TValue> vmGetter,
-        System.Action<TViewModel, TValue> vmSetter,
-        System.Func<TView, TValue> uiGetter,
-        System.Action<TView, TValue> uiSetter,
-        System.Func<TView, System.Action, System.IDisposable> subscribeUiChange
+        Func<TViewModel, TValue> vmGetter,
+        Action<TView, TValue> uiSetter
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        return viewModel.Bind(
+            propertyName,
+            () => vmGetter(viewModel),
+            val =>
+            {
+                if (view is View v && v.App != null)
+                {
+                    v.App.Invoke(() => uiSetter(view, val)); // Marshal safely [1]
+                }
+                else
+                {
+                    uiSetter(view, val);
+                }
+            }
+        );
+    }
+
+    internal static IDisposable BindTwoWay<TViewModel, TValue, TView>(
+        this TViewModel viewModel,
+        string propertyName,
+        TView view,
+        Func<TViewModel, TValue> vmGetter,
+        Action<TViewModel, TValue> vmSetter,
+        Func<TView, TValue> uiGetter,
+        Action<TView, TValue> uiSetter,
+        Func<TView, Action, IDisposable> subscribeUiChange
     )
         where TViewModel : INotifyPropertyChanged
     {
@@ -80,7 +164,14 @@ public static class BindingExtensions
                 updating = true;
                 try
                 {
-                    uiSetter(view, val);
+                    if (view is View v && v.App != null)
+                    {
+                        v.App.Invoke(() => uiSetter(view, val)); // Marshal safely [1]
+                    }
+                    else
+                    {
+                        uiSetter(view, val);
+                    }
                 }
                 finally
                 {
@@ -96,12 +187,7 @@ public static class BindingExtensions
                 if (updating)
                     return;
                 var newVal = uiGetter(view);
-                if (
-                    System.Collections.Generic.EqualityComparer<TValue>.Default.Equals(
-                        newVal,
-                        vmGetter(viewModel)
-                    )
-                )
+                if (EqualityComparer<TValue>.Default.Equals(newVal, vmGetter(viewModel)))
                     return;
 
                 var viewId = (view as View)?.Id ?? view?.GetType().Name ?? "Unknown";
@@ -128,45 +214,9 @@ public static class BindingExtensions
         });
     }
 
-    /// <summary>
-    /// Generic One-Way Binding: VM -> UI
-    /// Works for strings, bools, ints, or custom objects.
-    /// </summary>
-    public static IDisposable Bind<T>(
-        this INotifyPropertyChanged viewModel,
-        Func<T> propertyExpression,
-        Action<T> updateUi,
-        [CallerArgumentExpression(nameof(propertyExpression))] string? expression = null
-    )
-    {
-        string propertyName =
-            expression?.Split('.').Last()?.Trim('(', ')')
-            ?? throw new ArgumentException("Could not determine property name from expression.");
+    #endregion
 
-        return viewModel.Bind(propertyName, propertyExpression, updateUi);
-    }
-
-    public static IDisposable Bind<T>(
-        this INotifyPropertyChanged viewModel,
-        string propertyName,
-        Func<T> propertyExpression,
-        Action<T> updateUi
-    )
-    {
-        viewModel.PropertyChanged += Handler;
-        updateUi(propertyExpression());
-
-        return new DisposableAction(() => viewModel.PropertyChanged -= Handler);
-
-        void Handler(object? sender, PropertyChangedEventArgs e)
-        {
-            if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
-            {
-                var newValue = propertyExpression();
-                updateUi(newValue);
-            }
-        }
-    }
+    #region Standard View Bindings (Auto-Marshalled)
 
     public static IDisposable BindTextTo(
         this INotifyPropertyChanged viewModel,
@@ -176,7 +226,7 @@ public static class BindingExtensions
         [CallerArgumentExpression(nameof(getter))] string? expression = null
     )
     {
-        string propertyName = expression?.Split('.').Last()?.Trim('(', ')') ?? "Text";
+        string propertyName = ExtractPropertyName(expression);
         return viewModel.BindTextTo(target, propertyName, getter, setter);
     }
 
@@ -200,13 +250,7 @@ public static class BindingExtensions
                     tf => tf.Value ?? string.Empty,
                     (tf, val) =>
                     {
-                        if (tf.Value != val)
-                        {
-                            StanzaConfig.Logger?.Log(
-                                $"[BindText] VM -> TextField Value update: '{val}'"
-                            );
-                            tf.Value = val;
-                        }
+                        tf.Value = val;
                     },
                     (tf, onChange) =>
                     {
@@ -224,72 +268,48 @@ public static class BindingExtensions
                     }
                 );
             }
-            else
-            {
-                return viewModel.BindOneWay(
-                    propertyName,
-                    textField,
-                    _ => getter(),
-                    (tf, val) =>
-                    {
-                        if (tf.Value != val)
-                        {
-                            StanzaConfig.Logger?.Log(
-                                $"[BindText] VM -> TextField Value update (OneWay): '{val}'"
-                            );
-                            tf.Value = val;
-                        }
-                    }
-                );
-            }
+
+            return viewModel.BindOneWay(
+                propertyName,
+                textField,
+                _ => getter(),
+                (tf, val) =>
+                {
+                    tf.Value = val;
+                }
+            );
         }
-        else
+
+        if (setter != null)
         {
-            if (setter != null)
-            {
-                return viewModel.BindTwoWay(
-                    propertyName,
-                    target,
-                    _ => getter(),
-                    (_, val) => setter(val),
-                    t => t.Text,
-                    (t, val) =>
-                    {
-                        if (t.Text != val)
-                        {
-                            StanzaConfig.Logger?.Log(
-                                $"[BindText] VM -> UI text update on '{t.Id ?? t.GetType().Name}': '{val}'"
-                            );
-                            t.Text = val;
-                        }
-                    },
-                    (t, onChange) =>
-                    {
-                        EventHandler handler = (s, e) => onChange();
-                        t.TextChanged += handler;
-                        return new DisposableAction(() => t.TextChanged -= handler);
-                    }
-                );
-            }
-            else
-            {
-                return viewModel.BindOneWay(
-                    propertyName,
-                    target,
-                    _ => getter(),
-                    (t, val) =>
-                    {
-                        if (t.Text != val)
-                        {
-                            StanzaConfig.Logger?.Log(
-                                $"[BindText] VM -> UI text update on '{t.Id ?? t.GetType().Name}' (OneWay): '{val}'"
-                            );
-                            t.Text = val;
-                        }
-                    }
-                );
-            }
+            return viewModel.BindTwoWay(
+                propertyName,
+                target,
+                _ => getter(),
+                (_, val) => setter(val),
+                t => t.Text,
+                (t, val) =>
+                {
+                    t.Text = val;
+                },
+                (t, onChange) =>
+                {
+                    EventHandler handler = (s, e) => onChange();
+                    t.TextChanged += handler;
+                    return new DisposableAction(() => t.TextChanged -= handler);
+                }
+            );
         }
+
+        return viewModel.BindOneWay(
+            propertyName,
+            target,
+            _ => getter(),
+            (t, val) =>
+            {
+                t.Text = val;
+            }
+        );
     }
 
     public static IDisposable BindCheckedTo(
@@ -300,7 +320,7 @@ public static class BindingExtensions
         [CallerArgumentExpression(nameof(getter))] string? expression = null
     )
     {
-        string propertyName = expression?.Split('.').Last()?.Trim('(', ')') ?? "Checked";
+        string propertyName = ExtractPropertyName(expression);
         return viewModel.BindCheckedTo(checkBox, propertyName, getter, setter);
     }
 
@@ -321,13 +341,7 @@ public static class BindingExtensions
             (cb, val) =>
             {
                 var newState = val ? CheckState.Checked : CheckState.UnChecked;
-                if (cb.Value != newState)
-                {
-                    StanzaConfig.Logger?.Log(
-                        $"[BindChecked] VM -> UI checked update on '{cb.Id ?? cb.GetType().Name}': '{val}'"
-                    );
-                    cb.Value = newState;
-                }
+                cb.Value = newState;
             },
             (cb, onChange) =>
             {
@@ -349,14 +363,15 @@ public static class BindingExtensions
         Button button
     )
     {
-        void UpdateEnabled(object? s, EventArgs e) => button.Enabled = command.CanExecute(null);
-        void OnAccept(object? s, EventArgs e)
+        void UpdateEnabled(object? s, EventArgs e)
         {
-            StanzaConfig.Logger?.Log(
-                $"[BindCommand] Button '{button.Id ?? button.GetType().Name}' clicked. Executing command."
-            );
-            command.Execute(null);
+            if (button.App != null)
+                button.App.Invoke(() => button.Enabled = command.CanExecute(null));
+            else
+                button.Enabled = command.CanExecute(null);
         }
+
+        void OnAccept(object? s, EventArgs e) => command.Execute(null);
 
         command.CanExecuteChanged += UpdateEnabled;
         button.Accepting += OnAccept;
@@ -371,11 +386,8 @@ public static class BindingExtensions
 
     #endregion
 
-    #region Generator Emitter Targets (Used by InitializeComponent)
+    #region Generator Emitter Targets (Forwarders)
 
-    /// <summary>
-    /// Two-Way String Binding: VM <-> View.Text
-    /// </summary>
     public static IDisposable ApplyBindText<TViewModel>(
         this View target,
         TViewModel viewModel,
@@ -437,18 +449,13 @@ public static class BindingExtensions
     )
         where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(
+        return viewModel.BindOneWay(
             propertyName,
-            () => getter(viewModel),
-            val =>
+            view,
+            _ => getter(viewModel),
+            (v, val) =>
             {
-                if (view.Visible != val)
-                {
-                    StanzaConfig.Logger?.Log(
-                        $"[BindVisible] VM -> UI visibility update on '{view.Id ?? view.GetType().Name}': '{val}'"
-                    );
-                    view.Visible = val;
-                }
+                v.Visible = val;
             }
         );
     }
@@ -464,20 +471,42 @@ public static class BindingExtensions
     )
         where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(
+        return viewModel.BindOneWay(
             propertyName,
-            () => getter(viewModel),
-            val =>
+            view,
+            _ => getter(viewModel),
+            (v, val) =>
             {
-                if (view.Enabled != val)
-                {
-                    StanzaConfig.Logger?.Log(
-                        $"[BindEnabled] VM -> UI enabled update on '{view.Id ?? view.GetType().Name}': '{val}'"
-                    );
-                    view.Enabled = val;
-                }
+                v.Enabled = val;
             }
         );
+    }
+
+    #endregion
+
+    #region Private Helpers
+
+    /// <summary>
+    /// Robust, non-reflection compile-time expression string parsing.
+    /// Handles standard member lambdas, full paths, and local scope expressions cleanly [1].
+    /// </summary>
+    private static string ExtractPropertyName(string? expression)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return "Text";
+        }
+
+        // 1. Strip the lambda arrow operator (e.g. "() => viewModel.Name" or "vm => vm.Name")
+        if (expression.Contains("=>"))
+        {
+            expression = expression.Split(["=>"], StringSplitOptions.None).Last().Trim();
+        }
+
+        // 2. Extract final property name after any dots (e.g. "viewModel.Name" -> "Name")
+        string propertyName = expression.Split('.').Last().Trim('(', ')', ' ');
+
+        return propertyName;
     }
 
     #endregion

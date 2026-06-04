@@ -6,6 +6,14 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui;
 
+/// <summary>
+/// Provides high-performance, reflection-free extension methods for binding
+/// ViewModel properties to Terminal.Gui Views.
+/// </summary>
+/// <remarks>
+/// These methods are designed to be NativeAOT compatible by avoiding runtime reflection
+/// and utilizing compile-time captured member names via <see cref="CallerArgumentExpressionAttribute"/>.
+/// </remarks>
 public static class BindingExtensions
 {
     extension(View view)
@@ -41,16 +49,27 @@ public static class BindingExtensions
             set { }
         }
     }
-/// <summary>
-    /// Universally binds any ViewModel property to a UI action safely across threads [1].
+
+    /// <summary>
+    /// Establishes a thread-safe, one-way binding between a ViewModel property and a UI update action.
+    /// Automatically marshals property updates to the Terminal.Gui Main Loop using the provided <paramref name="dispatcher"/>.
     /// </summary>
+    /// <typeparam name="TViewModel">The type of the ViewModel, which must implement <see cref="INotifyPropertyChanged"/>.</typeparam>
+    /// <typeparam name="TValue">The type of the property value being bound.</typeparam>
+    /// <param name="viewModel">The ViewModel instance containing the source property.</param>
+    /// <param name="dispatcher">The <see cref="View"/> used to access the application main loop for thread-safe UI updates.</param>
+    /// <param name="propertyExpression">A lambda expression used to retrieve the current property value from the ViewModel.</param>
+    /// <param name="updateUi">An action executed on the UI thread whenever the property value changes.</param>
+    /// <param name="expression">The string representation of the property expression, automatically captured at compile-time via <see cref="CallerArgumentExpressionAttribute"/>.</param>
+    /// <returns>An <see cref="IDisposable"/> that removes the property change subscription and stops UI synchronization when disposed.</returns>
     public static IDisposable Bind<TViewModel, TValue>(
         this TViewModel viewModel,
         View dispatcher,
         Func<TViewModel, TValue> propertyExpression,
         Action<TValue> updateUi,
         [CallerArgumentExpression(nameof(propertyExpression))] string? expression = null
-    ) where TViewModel : INotifyPropertyChanged
+    )
+        where TViewModel : INotifyPropertyChanged
     {
         string propertyName = ExtractPropertyName(expression);
 
@@ -60,10 +79,12 @@ public static class BindingExtensions
             if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
             {
                 var newValue = propertyExpression(viewModel);
-                
+
                 // Safe UI thread marshalling [1]
-                if (dispatcher.App != null) dispatcher.App.Invoke(() => updateUi(newValue));
-                else updateUi(newValue);
+                if (dispatcher.App != null)
+                    dispatcher.App.Invoke(() => updateUi(newValue));
+                else
+                    updateUi(newValue);
             }
         };
 
@@ -71,33 +92,38 @@ public static class BindingExtensions
 
         // 2. Perform initial synchronization [1]
         var initialValue = propertyExpression(viewModel);
-        if (dispatcher.App != null) dispatcher.App.Invoke(() => updateUi(initialValue));
-        else updateUi(initialValue);
+        if (dispatcher.App != null)
+            dispatcher.App.Invoke(() => updateUi(initialValue));
+        else
+            updateUi(initialValue);
 
         // 3. Return cleanup token [1]
         return new DisposableAction(() => viewModel.PropertyChanged -= handler);
     }
+
     /// <summary>
-    /// Binds an ICommand to a Button, handling click execution and thread-safe enablement [1].
+    /// Binds an <see cref="ICommand"/> to a Terminal.Gui <see cref="Button"/>.
+    /// Synchronizes the button's <see cref="View.Enabled"/> state with <see cref="ICommand.CanExecute"/>
+    /// and triggers <see cref="ICommand.Execute"/> when the button is accepted.
     /// </summary>
-    public static IDisposable BindCommand(
-        this ICommand command,
-        Button button
-    )
+    /// <param name="command">The command to execute.</param>
+    /// <param name="button">The target button that will trigger the command and reflect its enabled state.</param>
+    /// <returns>An <see cref="IDisposable"/> that unhooks the command and button events when disposed.</returns>
+    public static IDisposable BindCommand(this ICommand command, Button button)
     {
         void UpdateEnabled(object? s, EventArgs e)
         {
-            if (button.App != null) 
+            if (button.App != null)
                 button.App.Invoke(() => button.Enabled = command.CanExecute(null)); // Safe marshal [1]
-            else 
+            else
                 button.Enabled = command.CanExecute(null);
         }
-        
+
         void OnAccept(object? s, EventArgs e) => command.Execute(null);
 
         command.CanExecuteChanged += UpdateEnabled;
         button.Accepting += OnAccept;
-        
+
         // Initial sync [1]
         UpdateEnabled(null, EventArgs.Empty);
 
@@ -107,6 +133,7 @@ public static class BindingExtensions
             button.Accepting -= OnAccept;
         });
     }
+
     #region Private Helpers
 
     /// <summary>

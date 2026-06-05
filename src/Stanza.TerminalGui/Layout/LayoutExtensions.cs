@@ -11,6 +11,11 @@ public static class LayoutExtensions
 {
     extension(View view)
     {
+            // Layout Marker
+    public Sizing WidthSize { get; set{} }
+    
+    // Binding Marker
+    public string BindText { get => ""; set{} }
         public int PositionX
         {
             get => 0; // Placeholder; wired by generator

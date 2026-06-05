@@ -4,6 +4,8 @@ using System.Windows.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
+[assembly: InternalsVisibleTo("Stanza.TerminalGui.Tests")]
+
 namespace Stanza.TerminalGui;
 
 /// <summary>
@@ -134,13 +136,85 @@ public static class BindingExtensions
         });
     }
 
+    /// <summary>
+    /// Establishes a thread-safe, two-way binding between a ViewModel property and a UI element.
+    /// </summary>
+    public static IDisposable BindTwoWay<TViewModel, TValue>(
+        this TViewModel viewModel,
+        View dispatcher,
+        Func<TViewModel, TValue> vmGetter,
+        Action<TValue> vmSetter,
+        Action<Action> subscribeUiChange,
+        Func<TValue> uiGetter,
+        Action<TValue> uiSetter,
+        [CallerArgumentExpression(nameof(vmGetter))] string? expression = null
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        string propertyName = ExtractPropertyName(expression);
+        bool updating = false;
+
+        // 1. VM -> UI (Uses your existing One-Way logic)
+        var vmToUi = viewModel.Bind(
+            dispatcher,
+            vmGetter,
+            val =>
+            {
+                if (updating)
+                    return;
+                updating = true;
+                try
+                {
+                    uiSetter(val);
+                }
+                finally
+                {
+                    updating = false;
+                }
+            },
+            expression
+        );
+
+        // 2. UI -> VM
+        // The subscribeUiChange action should hook into events like TextChanged or ValueChanged
+        var uiHandler = new Action(() =>
+        {
+            if (updating)
+                return;
+
+            var newVal = uiGetter();
+            if (EqualityComparer<TValue>.Default.Equals(newVal, vmGetter(viewModel)))
+                return;
+
+            updating = true;
+            try
+            {
+                vmSetter(newVal);
+            }
+            finally
+            {
+                updating = false;
+            }
+        });
+
+        subscribeUiChange(uiHandler);
+
+        // 3. Cleanup
+        return new DisposableAction(() =>
+        {
+            vmToUi.Dispose();
+            // Note: This primitive assumes the UI event unsubscription
+            // is handled by the caller or by the View's lifecycle.
+        });
+    }
+
     #region Private Helpers
 
     /// <summary>
     /// Robust, non-reflection compile-time expression string parsing.
     /// Handles standard member lambdas, full paths, and local scope expressions cleanly [1].
     /// </summary>
-    private static string ExtractPropertyName(string? expression)
+    internal static string ExtractPropertyName(string? expression)
     {
         if (string.IsNullOrWhiteSpace(expression))
         {

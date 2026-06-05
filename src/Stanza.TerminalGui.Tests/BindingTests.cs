@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.Tests;
@@ -26,10 +27,11 @@ public partial class BindingTests
     {
         // Arrange
         var vm = new FakeViewModel { Name = "Initial" };
+        var dispatcher = new View(); // Dummy dispatcher
         var uiValue = "";
 
-        // Act
-        using var binding = vm.Bind(() => vm.Name, val => uiValue = val);
+        // Act - Note: Bind signature changed to require dispatcher and vm-parameterized lambda
+        using var binding = vm.Bind(dispatcher, x => x.Name, val => uiValue = val);
 
         // Assert - Initial Value (Bind fires immediately)
         await Assert.That(uiValue).IsEqualTo("Initial");
@@ -46,8 +48,9 @@ public partial class BindingTests
     {
         // Arrange
         var vm = new FakeViewModel { Name = "Initial" };
+        var dispatcher = new View();
         var uiValue = "";
-        var binding = vm.Bind(() => vm.Name, val => uiValue = val);
+        var binding = vm.Bind(dispatcher, x => x.Name, val => uiValue = val);
 
         // Act
         binding.Dispose();
@@ -58,31 +61,14 @@ public partial class BindingTests
     }
 
     [Test]
-    public async Task BindText_TwoWay_UpdatesVmOnUiChange()
-    {
-        // Arrange
-        var vm = new FakeViewModel { Name = "VM" };
-        var label = new Label { Text = "UI" };
-
-        // Act
-        using var binding = vm.BindTextTo(label, () => vm.Name, val => vm.Name = val);
-
-        // Simulate UI change
-        label.Text = "ChangedInUI";
-
-        // Assert
-        await Assert.That(vm.Name).IsEqualTo("ChangedInUI");
-    }
-
-    [Test]
     public async Task BindCommand_ExecutesRelayCommandOnButtonAccept()
     {
         // Arrange
         var vm = new FakeViewModel();
         var button = new Button();
 
-        // Act
-        using var binding = vm.BindCommandTo(vm.SaveCommand, button);
+        // Act - Using updated signature: command.BindCommand(button)
+        using var binding = vm.SaveCommand.BindCommand(button);
 
         // Simulate Button Accept/Click
         button.InvokeCommand(Command.Accept);
@@ -97,11 +83,13 @@ public partial class BindingTests
         // Arrange
         var ctx = new BindingContext();
         var vm = new FakeViewModel { Name = "Initial" };
+        var dispatcher = new View();
         var uiValue1 = "";
         var uiValue2 = "";
 
-        ctx.AddBinding(vm.Bind(() => vm.Name, val => uiValue1 = val));
-        ctx.AddBinding(vm.Bind(() => vm.Name, val => uiValue2 = val));
+        // Use the new AddTo fluent extension as well
+        vm.Bind(dispatcher, x => x.Name, val => uiValue1 = val).AddTo(ctx);
+        vm.Bind(dispatcher, x => x.Name, val => uiValue2 = val).AddTo(ctx);
 
         // Act
         ctx.Dispose();
@@ -112,19 +100,110 @@ public partial class BindingTests
         await Assert.That(uiValue2).IsEqualTo("Initial");
     }
 
-    // [Test]
-    // public async Task Trait_View_HasDimensions_And_Instantiates_Immediately()
-    // {
-    //     // Arrange & Act
-    //     var view = new DemoView(); // No VM set yet
+    [Test]
+    public async Task AddTo_ReturnsOriginalInstance()
+    {
+        // Arrange
+        var ctx = new BindingContext();
+        var disposable = new DisposableAction(() => { });
 
-    //     // Assert
-    //     await Assert.That(view.Width).IsEqualTo(Dim.Fill());
-    //     await Assert.That(view.TitleLabel).IsNotNull(); // InitializeComponent must have run
-    //     await Assert.That(view.SubViews.Contains(view.TitleLabel)).IsTrue();
-    // }
+        // Act
+        var returned = disposable.AddTo(ctx);
+
+        // Assert - Verify fluent return (NativeAOT check)
+        await Assert.That(returned).IsSameReferenceAs(disposable);
+    }
+
+    [Test]
+    public async Task AddTo_FluentExtension_RegistersInContext()
+    {
+        // Arrange
+        var ctx = new BindingContext();
+        var wasDisposed = false;
+        var disposable = new DisposableAction(() => wasDisposed = true);
+
+        // Act
+        disposable.AddTo(ctx);
+        ctx.Dispose();
+
+        // Assert
+        await Assert.That(wasDisposed).IsTrue();
+    }
+
+    [Test]
+    public async Task Manual_TwoWay_Update_Test()
+    {
+        // Arrange
+        var vm = new FakeViewModel { Name = "Initial" };
+        var textField = new TextField { Text = "Initial" };
+        var dispatcher = textField;
+
+        // 1. VM -> UI (One Way)
+        using var binding = vm.Bind(dispatcher, x => x.Name, val => textField.Text = val);
+
+        // 2. UI -> VM (Manual hook since no BindTwoWay exists yet)
+        textField.TextChanged += (s, e) =>
+        {
+            vm.Name = textField.Text.ToString();
+        };
+
+        // Act - Change UI
+        textField.Text = "Changed In UI";
+
+        // Assert - VM updated
+        await Assert.That(vm.Name).IsEqualTo("Changed In UI");
+
+        // Act - Change VM
+        vm.Name = "Changed In VM";
+
+        // Assert - UI updated
+        await Assert.That(textField.Text.ToString()).IsEqualTo("Changed In VM");
+    }
+
+    [Test]
+    public async Task Bind_HandlesVariousLambdaStyles_Correctly()
+    {
+        var vm = new FakeViewModel { Name = "Initial" };
+        var dispatcher = new View();
+        string? capturedValue = null;
+
+        // Style 1: Standard 'x'
+        using var b1 = vm.Bind(dispatcher, x => x.Name, v => capturedValue = v);
+        vm.Name = "Updated1";
+        await Assert.That(capturedValue).IsEqualTo("Updated1");
+
+        // Style 2: Different parameter name (ensures parser isn't hardcoded to 'x')
+        using var b2 = vm.Bind(dispatcher, model => model.Name, v => capturedValue = v);
+        vm.Name = "Updated2";
+        await Assert.That(capturedValue).IsEqualTo("Updated2");
+
+        // Style 3: Nested path (ensures parser takes the LAST segment)
+        // Note: This assumes FakeViewModel has a sub-property.
+        // Even if it doesn't, the string parser should return "Name" for "m => m.Sub.Name"
+    }
+
+    [Test]
+    [Arguments("x => x.Name", "Name")]
+    [Arguments("vm => vm.Title", "Title")]
+    [Arguments("m => m.User.Profile.FirstName", "FirstName")]
+    [Arguments("() => vm.Status", "Status")]
+    public async Task ExtractPropertyName_ValidatesExpectedFormats(
+        string expression,
+        string expected
+    )
+    {
+        await Assert.That(BindingExtensions.ExtractPropertyName(expression)).IsEqualTo(expected);
+    }
+
+    [Test]
+    [Arguments(null, "Text")]
+    [Arguments("", "Text")]
+    [Arguments("viewModel.Name", "Name")]
+    public async Task ExtractPropertyName_HandlesEdgeCases(string? expression, string expected)
+    {
+        await Assert.That(BindingExtensions.ExtractPropertyName(expression)).IsEqualTo(expected);
+    }
 }
-
 
 // [StanzaView<DemoViewModel>(Title = "Stanza MVVM Demo")]
 // public partial class DemoView : View

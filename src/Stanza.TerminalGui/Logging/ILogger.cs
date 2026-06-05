@@ -5,5 +5,9 @@ namespace Stanza.TerminalGui;
 /// </summary>
 public interface ILogger
 {
+    /// <summary>
+    /// Log the received message.
+    /// </summary>
+    /// <param name="message"></param>
     void Log(string message);
 }

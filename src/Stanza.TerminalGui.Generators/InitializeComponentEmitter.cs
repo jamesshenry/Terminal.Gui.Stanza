@@ -72,7 +72,7 @@ internal class InitializeComponentEmitter
                 "            throw new System.InvalidOperationException(\"ViewModel must be set before calling Bind.\");"
             );
             sb.AppendLine(
-                "        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));"
+                "        this.ViewModel.Bind(expr, getter, update).AddTo(BindingContext);"
             );
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -147,7 +147,7 @@ internal class InitializeComponentEmitter
             if (bindMethod == "ApplyBindCommand")
             {
                 sb.AppendLine(
-                    $"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, this.ViewModel!.{binding.ViewModelProperty}));"
+                    $"        {binding.OwnerView}.{bindMethod}(this.ViewModel!, this.ViewModel!.{binding.ViewModelProperty}).AddTo(BindingContext);"
                 );
             }
             else if (
@@ -156,7 +156,7 @@ internal class InitializeComponentEmitter
             )
             {
                 sb.AppendLine(
-                    $"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", vm => vm.{binding.ViewModelProperty}, (vm, val) => vm.{binding.ViewModelProperty} = val));"
+                    $"        {binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", vm => vm.{binding.ViewModelProperty}, (vm, val) => vm.{binding.ViewModelProperty} = val).AddTo(BindingContext);"
                 );
             }
             else
@@ -165,7 +165,7 @@ internal class InitializeComponentEmitter
                     ? $"vm => vm.{binding.ViewModelProperty}.ToString()"
                     : $"vm => vm.{binding.ViewModelProperty}";
                 sb.AppendLine(
-                    $"        BindingContext.AddBinding({binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", {getterExpr}));"
+                    $"        {binding.OwnerView}.{bindMethod}(this.ViewModel!, \"{binding.ViewModelProperty}\", {getterExpr}).AddTo(BindingContext);"
                 );
             }
         }

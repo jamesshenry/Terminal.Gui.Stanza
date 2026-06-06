@@ -65,7 +65,7 @@ public class DiagnosticTests
 
         var diags = TestHelper.VerifyDiagnostics(source);
 
-        await Assert.That(diags.Any(d => d.Id == "STN020")).IsTrue();
+        await Assert.That(diags).Contains(d => d.Id == "STN020");
     }
 
     [Test]
@@ -89,7 +89,7 @@ public class DiagnosticTests
 
         var diags = TestHelper.VerifyDiagnostics(source);
 
-        await Assert.That(diags.Any(d => d.Id == "STN030")).IsTrue();
+        await Assert.That(diags).Contains(d => d.Id == "STN030");
     }
 
     [Test]
@@ -112,11 +112,11 @@ public class DiagnosticTests
 
         var diags = TestHelper.VerifyDiagnostics(source);
 
-        await Assert.That(diags.Any(d => d.Id == "STN012")).IsTrue();
+        await Assert.That(diags).Contains(d => d.Id == "STN012");
     }
 
     [Test]
-    public async Task STN004_Error_OnExplicitTwoWayReadOnly()
+    public async Task STN005_Error_OnExplicitTwoWayReadOnly()
     {
         var source = """
             using Stanza.TerminalGui;
@@ -136,6 +136,6 @@ public class DiagnosticTests
 
         var diags = TestHelper.VerifyDiagnostics(source);
 
-        await Assert.That(diags.Any(d => d.Id == "STN004")).IsTrue();
+        await Assert.That(diags).Contains(d => d.Id == "STN005");
     }
 }

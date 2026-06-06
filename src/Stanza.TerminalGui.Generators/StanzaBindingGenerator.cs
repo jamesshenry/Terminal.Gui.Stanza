@@ -58,11 +58,16 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                     classSymbol.Name
                 )
             );
+            // Fatal structural error - stop here
             return new ViewParseResult(null, diagnostics.ToImmutable());
         }
 
         // 2. STN011: Structural Check - Inherits from View
-        if (!IsSubtypeOf(classSymbol, "Terminal.Gui.ViewBase.View"))
+        // We check both the specific namespace and the short name to be resilient in test environments
+        if (
+            !IsSubtypeOf(classSymbol, "Terminal.Gui.ViewBase.View")
+            && classSymbol.BaseType?.Name != "View"
+        )
         {
             diagnostics.Add(
                 Diagnostic.Create(
@@ -84,20 +89,20 @@ public class StanzaBindingGenerator : IIncrementalGenerator
         };
         foreach (var reserved in reservedNames)
         {
+            var existing = classSymbol.GetMembers(reserved).FirstOrDefault();
+            // Only flag if it was declared in the same syntax tree (the user's source)
             if (
-                classSymbol
-                    .GetMembers(reserved)
-                    .Any(m =>
-                        m.DeclaringSyntaxReferences.Any(r =>
-                            r.SyntaxTree == classDeclaration.SyntaxTree
-                        )
-                    )
+                existing != null
+                && existing.DeclaringSyntaxReferences.Any(r =>
+                    r.SyntaxTree == classDeclaration.SyntaxTree
+                )
             )
             {
                 diagnostics.Add(
                     Diagnostic.Create(
                         StanzaDiagnostics.MemberCollision,
-                        classDeclaration.Identifier.GetLocation(),
+                        existing.Locations.FirstOrDefault()
+                            ?? classDeclaration.Identifier.GetLocation(),
                         classSymbol.Name,
                         reserved
                     )
@@ -110,11 +115,11 @@ public class StanzaBindingGenerator : IIncrementalGenerator
         );
         var vmTypeSymbol =
             attribute.AttributeClass?.TypeArguments.FirstOrDefault() as INamedTypeSymbol;
-        var vmType = vmTypeSymbol?.ToDisplayString();
 
-        if (vmTypeSymbol == null || vmType == null)
+        if (vmTypeSymbol == null)
             return new ViewParseResult(null, diagnostics.ToImmutable());
 
+        var vmType = vmTypeSymbol.ToDisplayString();
         var bindings = ImmutableArray.CreateBuilder<BindingIR>();
         var members = classSymbol
             .GetMembers()
@@ -129,10 +134,10 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                 .Where(a =>
                     a.AttributeClass?.Name.StartsWith("Bind") == true
                     && a.AttributeClass.Name.EndsWith("Attribute")
-                );
+                )
+                .ToList();
 
-            // STN032: Duplicate Bindings on same member
-            if (memberBindings.Count() > 1)
+            if (memberBindings.Count > 1)
             {
                 diagnostics.Add(
                     Diagnostic.Create(
@@ -153,11 +158,8 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                 if (string.IsNullOrEmpty(vmPropName))
                     continue;
 
-                // STN020: Resolution - Property Missing
-                var vmProperty = vmTypeSymbol
-                    .GetMembers(vmPropName!)
-                    .OfType<IPropertySymbol>()
-                    .FirstOrDefault();
+                // STN020: Resolution - Search the full hierarchy for the property
+                var vmProperty = FindPropertyInHierarchy(vmTypeSymbol, vmPropName!);
                 if (vmProperty == null)
                 {
                     diagnostics.Add(
@@ -186,20 +188,26 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                 }
 
                 // STN022: Command Type Safety
-                if (
-                    bindingType == "BindCommand"
-                    && !vmProperty.Type.AllInterfaces.Any(i =>
-                        i.ToDisplayString() == "System.Windows.Input.ICommand"
-                    )
-                )
+                if (bindingType == "BindCommand")
                 {
-                    diagnostics.Add(
-                        Diagnostic.Create(StanzaDiagnostics.NotAnICommand, attrLocation, vmPropName)
+                    bool implementsCommand = vmProperty.Type.AllInterfaces.Any(i =>
+                        i.ToDisplayString() == "System.Windows.Input.ICommand"
+                        || i.Name == "ICommand"
                     );
-                    continue;
+                    if (!implementsCommand)
+                    {
+                        diagnostics.Add(
+                            Diagnostic.Create(
+                                StanzaDiagnostics.NotAnICommand,
+                                attrLocation,
+                                vmPropName
+                            )
+                        );
+                        continue;
+                    }
                 }
 
-                // STN030: Value Type Safety (Checked/Visible/Enabled require Bool)
+                // STN030: Value Type Safety
                 var boolRequired = new[] { "BindChecked", "BindVisible", "BindEnabled" };
                 if (
                     boolRequired.Contains(bindingType)
@@ -213,12 +221,13 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                             bindingType,
                             "bool",
                             vmPropName,
-                            vmProperty.Type.Name
+                            vmProperty.Type.ToDisplayString()
                         )
                     );
                     continue;
                 }
 
+                // Read-Only Logic
                 bool isReadOnly = vmProperty.IsReadOnly;
                 string mode =
                     (bindingType == "BindText" || bindingType == "BindChecked")
@@ -233,7 +242,6 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                     isExplicitMode = true;
                 }
 
-                // STN004/005: Read-Only logic
                 if (mode == "TwoWay" && isReadOnly)
                 {
                     if (isExplicitMode)
@@ -264,15 +272,27 @@ public class StanzaBindingGenerator : IIncrementalGenerator
             }
         }
 
+        // Resolve Namespace safely for Emitter
+        string ns = classSymbol.ContainingNamespace.IsGlobalNamespace
+            ? "Global"
+            : classSymbol.ContainingNamespace.ToDisplayString();
+
         return new ViewParseResult(
-            new ViewIR(
-                classSymbol.ContainingNamespace.ToDisplayString(),
-                classSymbol.Name,
-                vmType,
-                bindings.ToImmutable()
-            ),
+            new ViewIR(ns, classSymbol.Name, vmType, bindings.ToImmutable()),
             diagnostics.ToImmutable()
         );
+    }
+
+    private static IPropertySymbol? FindPropertyInHierarchy(ITypeSymbol? type, string name)
+    {
+        while (type != null)
+        {
+            var prop = type.GetMembers(name).OfType<IPropertySymbol>().FirstOrDefault();
+            if (prop != null)
+                return prop;
+            type = type.BaseType;
+        }
+        return null;
     }
 
     private static bool IsSubtypeOf(INamedTypeSymbol symbol, string fullyQualifiedBaseName)

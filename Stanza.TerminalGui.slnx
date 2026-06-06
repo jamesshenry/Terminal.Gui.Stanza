@@ -6,7 +6,6 @@
     <Project Path="src/Stanza.TerminalGui.Generators.Tests/Stanza.TerminalGui.Generators.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/">
-    <Project Path="samples/Stanza.TerminalGui.Demo/Stanza.TerminalGui.Demo.csproj" />
     <Project Path="samples/Stanza.TerminalGui.ClusterExplorer/Stanza.TerminalGui.ClusterExplorer.csproj" />
   </Folder>
 </Solution>

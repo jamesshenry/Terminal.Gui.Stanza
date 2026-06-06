@@ -8,14 +8,26 @@ namespace Stanza.TerminalGui.ClusterExplorer;
 public partial class NodeGridPanel : FrameView
 {
     // Level 3 Subview: Handled recursively
-    public NodeHealthCard PrimaryNodeCard { get; private set; } =
-        new() { Width = Dim.Percent(50), Height = Dim.Fill() };
+    public NodeHealthCard PrimaryNodeCard { get; private set; } = new();
 
-    public CpuHistoryPanel HistoryPanel { get; private set; } =
-        new()
-        {
-            RightOf = nameof(PrimaryNodeCard),
-            Width = Dim.Fill(),
-            Height = Dim.Fill(),
-        };
+    public CpuHistoryPanel HistoryPanel { get; private set; } = new();
+
+    public NodeGridPanel()
+    {
+        PrimaryNodeCard.Width = Dim.Percent(50);
+        PrimaryNodeCard.Height = Dim.Fill();
+
+        HistoryPanel.X = Pos.Right(PrimaryNodeCard);
+        HistoryPanel.Width = Dim.Fill();
+        HistoryPanel.Height = Dim.Fill();
+
+        Add(PrimaryNodeCard, HistoryPanel);
+    }
+
+    public NodeGridPanel(ClusterExplorerViewModel viewModel) : this()
+    {
+        this.ViewModel = viewModel;
+        PrimaryNodeCard.ViewModel = viewModel;
+        HistoryPanel.ViewModel = viewModel;
+    }
 }

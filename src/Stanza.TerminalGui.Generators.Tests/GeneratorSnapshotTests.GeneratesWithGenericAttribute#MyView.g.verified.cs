@@ -3,70 +3,37 @@
 #nullable enable
 namespace TestNamespace;
 
-using System.Linq;
-using Terminal.Gui;
-using Terminal.Gui.ViewBase;
 using Stanza.TerminalGui;
 
-partial class MyView : Stanza.TerminalGui.IStanzaView<TestNamespace.MyViewModel>
+partial class MyView : IStanzaView<TestNamespace.MyViewModel>
 {
-    public MyView() : base()
-    {
-    }
-
-    public MyView(TestNamespace.MyViewModel viewModel) : this()
-    {
-        this.ViewModel = viewModel;
-    }
-
+    private BindingContext _bindingContext = new();
+    public BindingContext BindingContext => _bindingContext;
     private TestNamespace.MyViewModel? _viewModel;
-    public TestNamespace.MyViewModel? ViewModel {
+
+    public TestNamespace.MyViewModel? ViewModel
+    {
         get => _viewModel;
-        set {
+        set
+        {
             if (object.ReferenceEquals(_viewModel, value)) return;
-
-            _bindingContext.Dispose();
             _viewModel = value;
-            _bindingContext = new BindingContext();
-
-            if (value != null) InitializeComponent();
+            ApplyBindings();
         }
     }
 
-    private BindingContext _bindingContext = new();
-    public BindingContext BindingContext => _bindingContext;
-
-    protected void Bind<T>(System.Func<T> getter, System.Action<T> update, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(getter))] string expr = "")
+    private void ApplyBindings()
     {
-        if (this.ViewModel == null)
-            throw new System.InvalidOperationException("ViewModel must be set before calling Bind.");
-        BindingContext.AddBinding(this.ViewModel.Bind(expr, getter, update));
+        _bindingContext.Dispose();
+        _bindingContext = new BindingContext();
+        if (_viewModel == null) return;
+
+        _bindingContext.AddBinding(MyLabel.ApplyBindText(_viewModel, "Name", x => x.Name, (x, val) => x.Name = val));
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
-        {
-            _bindingContext.Dispose();
-        }
+        if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
-
-    protected void InitializeComponent()
-    {
-        // 1. Instantiate controls
-        MyLabel ??= new();
-
-        // 2. Apply properties and layout
-        MyLabel.Text = "Hello";
-
-        // 3. Wire bindings
-
-        // 4. Add to view hierarchy
-        if (!this.SubViews.Contains(MyLabel)) this.Add(MyLabel);
-
-        OnInitialized();
-    }
-
-    partial void OnInitialized();
 }

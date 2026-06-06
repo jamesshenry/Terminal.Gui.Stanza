@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Terminal.Gui;
 using Stanza.TerminalGui.Generators;
+using Terminal.Gui;
 using VerifyTests;
 using VerifyTUnit;
 
@@ -14,37 +17,6 @@ public class GeneratorSnapshotTests
     public Task GeneratesCorrectly()
     {
         var source = """
-using Stanza.TerminalGui;
-using Stanza.TerminalGui;
-using Terminal.Gui.Views;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-    public string Name { get; set; }
-}
-
-[StanzaView]
-public partial class MyView : View
-{
-    public MyView(MyViewModel viewModel)
-    {
-    }
-
-    public Label MyLabel { get; set; } = new() { Text = "Hello" };
-}
-""";
-
-        return TestHelper.Verify(source);
-    }
-
-    [Test]
-    public Task GeneratesWithGenericAttribute()
-    {
-        var source = """
-using Stanza.TerminalGui;
 using Stanza.TerminalGui;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
@@ -59,6 +31,7 @@ public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.Observab
 [StanzaView<MyViewModel>]
 public partial class MyView : View
 {
+    [BindText(nameof(MyViewModel.Name))]
     public Label MyLabel { get; set; } = new() { Text = "Hello" };
 }
 """;
@@ -67,331 +40,29 @@ public partial class MyView : View
     }
 
     [Test]
-    public Task GeneratesComplexLayouts()
+    public Task GeneratesWithGenericAttribute()
     {
         var source = """
-using Stanza.TerminalGui;
 using Stanza.TerminalGui;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
-using Terminal.Gui;
 
 namespace TestNamespace;
 
-public class MyLabel : View
-{
-    public string Below { get; set; }
-    public string RightOf { get; set; }
-}
-
-public partial class DashboardViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-    public string Summary { get; set; }
-}
-
-[StanzaView<DashboardViewModel>]
-public partial class DashboardView : Window
-{
-    public MyLabel LeftPanel { get; set; } = new();
-
-    public MyLabel RightPanel { get; set; } = new() {
-        RightOf = nameof(LeftPanel)
-    };
-
-    public MyLabel FooterLabel { get; set; } = new() {
-        Y = Pos.AnchorEnd(1),
-        X = Pos.Center(),
-        Width = Dim.Fill()
-    };
-}
-""";
-
-        return TestHelper.Verify(source);
-    }
-
-    [Test]
-    public async Task ReportsCircularLayoutDependency_AsStn001Error()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui;
-using Terminal.Gui.ViewBase;
-using Terminal.Gui.Views;
-
-namespace TestNamespace;
-
-public partial class CircularVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-[StanzaView<CircularVm>]
-public partial class CircularView : View
-{
-    public View LeftPanel { get; set; } = new() { Below = nameof(RightPanel) };
-    public View RightPanel { get; set; } = new() { Below = nameof(LeftPanel) };
-}
-""";
-
-        var diagnostics = TestHelper.VerifyDiagnostics(source);
-        await Assert
-            .That(diagnostics.Any(d => d.Id == "STN001" && d.Severity == DiagnosticSeverity.Error))
-            .IsTrue();
-    }
-
-    [Test]
-    public async Task SemanticNameof_Variants_CompileSuccessfully()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public partial class NameofVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     public string Name { get; set; }
 }
 
-public class NameofLabel : View
+[StanzaView<MyViewModel>]
+public partial class MyView : View
 {
-    public string Below { get; set; } = string.Empty;
-    public string BindText { get; set; } = string.Empty;
-}
-
-[StanzaView<NameofVm>]
-public partial class NameofView : View
-{
-    public NameofLabel TitleLabel { get; set; } = new();
-    public NameofLabel NameLabel { get; set; } = new() { Below = nameof(TestNamespace.NameofView.TitleLabel), BindText = nameof(TestNamespace.NameofVm.Name) };
+    [BindText(nameof(MyViewModel.Name))]
+    public Label MyLabel { get; set; } = new() { Text = "Hello" };
 }
 """;
 
-        var diagnostics = TestHelper.GetCompileDiagnostics(source);
-        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
-        if (errors.Count > 0)
-        {
-            throw new Exception("Semantic nameof compile errors:\n" + string.Join("\n", errors));
-        }
-
-        await Assert.That(errors.Count).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task CtorInferredVm_ImplementsInpc_GeneratesSuccessfully()
-    {
-        var source = """
-using System.ComponentModel;
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public class ManualInpcVm : INotifyPropertyChanged
-{
-    public event PropertyChangedEventHandler? PropertyChanged;
-    public string Name { get; set; } = string.Empty;
-}
-
-[StanzaView]
-public partial class InpcView : View
-{
-    public InpcView(ManualInpcVm vm)
-    {
-    }
-}
-""";
-
-        var diagnostics = TestHelper.GetCompileDiagnostics(source);
-        await Assert.That(diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error)).IsFalse();
-    }
-
-    [Test]
-    public async Task Topology_DisjointViews_PreservesAll()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-using Terminal.Gui.Views;
-
-namespace TestNamespace;
-
-public partial class TopologyVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-[StanzaView<TopologyVm>]
-public partial class DisjointView : View
-{
-    public Label A { get; set; } = new() { Text = "A" };
-    public Label B { get; set; } = new() { Text = "B" };
-}
-""";
-
-        var generated = TestHelper.GetGeneratedSource(source, "DisjointView.g.cs");
-        await Assert.That(generated.Contains("this.Add(A);")).IsTrue();
-        await Assert.That(generated.Contains("this.Add(B);")).IsTrue();
-    }
-
-    [Test]
-    public async Task Topology_LinearDependencies_OrdersAThenBThenC()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-using Terminal.Gui.Views;
-
-namespace TestNamespace;
-
-public partial class TopologyVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-[StanzaView<TopologyVm>]
-public partial class LinearView : View
-{
-    public Label A { get; set; } = new();
-    public Label B { get; set; } = new() { Below = nameof(A) };
-    public Label C { get; set; } = new() { Below = nameof(B) };
-}
-""";
-
-        var generated = TestHelper.GetGeneratedSource(source, "LinearView.g.cs");
-        var addA = generated.IndexOf("this.Add(A);", StringComparison.Ordinal);
-        var addB = generated.IndexOf("this.Add(B);", StringComparison.Ordinal);
-        var addC = generated.IndexOf("this.Add(C);", StringComparison.Ordinal);
-
-        await Assert.That(addA >= 0 && addB >= 0 && addC >= 0).IsTrue();
-        await Assert.That(addA < addB && addB < addC).IsTrue();
-    }
-
-    [Test]
-    public async Task Topology_BranchingDependencies_PlacesRootFirst()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-using Terminal.Gui.Views;
-
-namespace TestNamespace;
-
-public partial class TopologyVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-[StanzaView<TopologyVm>]
-public partial class BranchingView : View
-{
-    public Label A { get; set; } = new();
-    public Label B { get; set; } = new() { Below = nameof(A) };
-    public Label C { get; set; } = new() { RightOf = nameof(A) };
-}
-""";
-
-        var generated = TestHelper.GetGeneratedSource(source, "BranchingView.g.cs");
-        var addA = generated.IndexOf("this.Add(A);", StringComparison.Ordinal);
-        var addB = generated.IndexOf("this.Add(B);", StringComparison.Ordinal);
-        var addC = generated.IndexOf("this.Add(C);", StringComparison.Ordinal);
-
-        await Assert.That(addA >= 0 && addB >= 0 && addC >= 0).IsTrue();
-        await Assert.That(addA < addB).IsTrue();
-        await Assert.That(addA < addC).IsTrue();
-    }
-
-    [Test]
-    public async Task TitleAttribute_EmitsTitleAssignment_InGeneratedParameterlessCtor()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public partial class TitleVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-[StanzaView<TitleVm>(Title = "My Form")]
-public partial class TitleWindow : Window
-{
-}
-""";
-
-        var generated = TestHelper.GetGeneratedSource(source, "TitleWindow.g.cs");
-        await Assert
-            .That(generated.Contains("this.Title = \"My Form\";", StringComparison.Ordinal))
-            .IsTrue();
-    }
-
-    [Test]
-    public async Task LayoutConstraint_EmitsAssignmentOnOwnerControl()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public partial class LayoutVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-public class LayoutLabel : View
-{
-    public string Below { get; set; } = string.Empty;
-}
-
-[StanzaView<LayoutVm>]
-public partial class LayoutView : View
-{
-    public LayoutLabel TitleLabel { get; set; } = new();
-    public LayoutLabel NameInput { get; set; } = new() { Below = nameof(TitleLabel) };
-}
-""";
-
-        var generated = TestHelper.GetGeneratedSource(source, "LayoutView.g.cs");
-        await Assert
-            .That(
-                generated.Contains(
-                    "NameInput.Y = Pos.Bottom(TitleLabel);",
-                    StringComparison.Ordinal
-                )
-            )
-            .IsTrue();
-    }
-
-    [Test]
-    public async Task SyntheticBelow_Assignment_IsInterceptedAndTranslated()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public partial class SyntheticVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-}
-
-public class SyntheticLabel : View
-{
-    public string Below { get; set; } = string.Empty;
-}
-
-[StanzaView<SyntheticVm>]
-public partial class SyntheticView : View
-{
-    public SyntheticLabel OtherLabel { get; set; } = new();
-    public SyntheticLabel MyLabel { get; set; } = new() { Below = nameof(OtherLabel) };
-}
-""";
-
-        var generated = TestHelper.GetGeneratedSource(source, "SyntheticView.g.cs");
-        await Assert
-            .That(
-                generated.Contains("MyLabel.Y = Pos.Bottom(OtherLabel);", StringComparison.Ordinal)
-            )
-            .IsTrue();
+        return TestHelper.Verify(source);
     }
 
     [Test]
@@ -400,6 +71,7 @@ public partial class SyntheticView : View
         var source = """
 using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace TestNamespace;
 
@@ -408,15 +80,11 @@ public class ReadOnlyVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
     public string Name => "ReadOnly";
 }
 
-public class BindingLabel : View
-{
-    public string BindText { get; set; } = string.Empty;
-}
-
 [StanzaView<ReadOnlyVm>]
 public partial class ReadOnlyBindingView : View
 {
-    public BindingLabel NameLabel { get; set; } = new() { BindText = nameof(ReadOnlyVm.Name) };
+    [BindText(nameof(ReadOnlyVm.Name))]
+    public Label NameLabel { get; set; } = new();
 }
 """;
 
@@ -424,13 +92,13 @@ public partial class ReadOnlyBindingView : View
         await Assert
             .That(
                 generated.Contains(
-                    "BindingContext.AddBinding(NameLabel.ApplyBindText(this.ViewModel!, \"Name\", vm => vm.Name));",
+                    "ApplyBindText(_viewModel, \"Name\", x => x.Name)",
                     StringComparison.Ordinal
                 )
             )
             .IsTrue();
         await Assert
-            .That(generated.Contains("(vm, val) => vm.Name = val", StringComparison.Ordinal))
+            .That(generated.Contains("(x, val) => x.Name = val", StringComparison.Ordinal))
             .IsFalse();
     }
 }
@@ -520,7 +188,7 @@ public static class TestHelper
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
         );
 
-        var generator = new StanzaViewGenerator();
+        var generator = new StanzaBindingGenerator();
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new[] { generator.AsSourceGenerator() },

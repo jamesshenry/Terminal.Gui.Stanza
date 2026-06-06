@@ -18,15 +18,12 @@ public partial class CpuHistoryPanel : FrameView
     public CpuHistoryPanel()
     {
         Title = "CPU History";
+        HistoryGraph.Initialized += HistoryGraphOnInitialized;
+        Add(HistoryGraph);
     }
 
     public GraphView HistoryGraph { get; private set; } =
         new() { Width = Dim.Fill(), Height = Dim.Fill() };
-
-    partial void OnInitialized()
-    {
-        HistoryGraph.Initialized += HistoryGraphOnInitialized;
-    }
 
     private void HistoryGraphOnInitialized(object? sender, EventArgs e)
     {

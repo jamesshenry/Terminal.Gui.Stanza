@@ -208,6 +208,127 @@ public static class BindingExtensions
         });
     }
 
+    #region Generator Apply Methods
+
+    /// <summary>
+    /// Generator target for text binding.
+    /// </summary>
+    public static IDisposable ApplyBindText<TViewModel>(
+        this View target,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, object> getter,
+        Action<TViewModel, string>? setter = null
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        if (setter != null)
+        {
+            return viewModel.BindTwoWay(
+                target,
+                getter,
+                val => setter(viewModel, val?.ToString() ?? string.Empty),
+                handler => target.TextChanged += (s, e) => handler(),
+                () => target.Text?.ToString() ?? string.Empty,
+                val => target.Text = val?.ToString() ?? string.Empty,
+                propertyName
+            );
+        }
+        else
+        {
+            return viewModel.Bind(
+                target,
+                getter,
+                val => target.Text = val?.ToString() ?? string.Empty,
+                propertyName
+            );
+        }
+    }
+
+    /// <summary>
+    /// Generator target for checked binding.
+    /// </summary>
+    public static IDisposable ApplyBindChecked<TViewModel>(
+        this CheckBox target,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, bool> getter,
+        Action<TViewModel, bool>? setter = null
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        if (setter != null)
+        {
+            return viewModel.BindTwoWay(
+                target,
+                getter,
+                val => setter(viewModel, val),
+                handler => target.ValueChanged += (s, e) => handler(),
+                () => target.Value == Terminal.Gui.Views.CheckState.Checked,
+                val =>
+                    target.Value = val
+                        ? Terminal.Gui.Views.CheckState.Checked
+                        : Terminal.Gui.Views.CheckState.UnChecked,
+                propertyName
+            );
+        }
+        else
+        {
+            return viewModel.Bind(
+                target,
+                getter,
+                val =>
+                    target.Value = val
+                        ? Terminal.Gui.Views.CheckState.Checked
+                        : Terminal.Gui.Views.CheckState.UnChecked,
+                propertyName
+            );
+        }
+    }
+
+    /// <summary>
+    /// Generator target for visible binding.
+    /// </summary>
+    public static IDisposable ApplyBindVisible<TViewModel>(
+        this View target,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, bool> getter
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        return viewModel.Bind(target, getter, val => target.Visible = val, propertyName);
+    }
+
+    /// <summary>
+    /// Generator target for enabled binding.
+    /// </summary>
+    public static IDisposable ApplyBindEnabled<TViewModel>(
+        this View target,
+        TViewModel viewModel,
+        string propertyName,
+        Func<TViewModel, bool> getter
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        return viewModel.Bind(target, getter, val => target.Enabled = val, propertyName);
+    }
+
+    /// <summary>
+    /// Generator target for command binding.
+    /// </summary>
+    public static IDisposable ApplyBindCommand<TViewModel>(
+        this Button target,
+        TViewModel viewModel,
+        ICommand command
+    )
+        where TViewModel : INotifyPropertyChanged
+    {
+        return command.BindCommand(target);
+    }
+
+    #endregion
+
     #region Private Helpers
 
     /// <summary>

@@ -22,10 +22,3 @@ public class StanzaViewAttribute : Attribute
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class StanzaViewAttribute<TViewModel> : StanzaViewAttribute
     where TViewModel : System.ComponentModel.INotifyPropertyChanged { }
-    
-// 1. The Sizing Union
-public union Sizing (Fill, Percent, Absolute);
-
-public record struct Fill(int Margin = 0);
-public record struct Percent(int Value);
-public record struct Absolute(int Value);

@@ -29,7 +29,8 @@ public partial class DashboardView : Window
         Add(LeftPanel, RightPanel, FooterLabel);
     }
 
-    public DashboardView(DashboardViewModel viewModel) : this()
+    public DashboardView(DashboardViewModel viewModel)
+        : this()
     {
         this.ViewModel = viewModel;
         LeftPanel.ViewModel = viewModel;

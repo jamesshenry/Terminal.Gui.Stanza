@@ -219,7 +219,8 @@ public static class BindingExtensions
         string propertyName,
         Func<TViewModel, object> getter,
         Action<TViewModel, string>? setter = null
-    ) where TViewModel : INotifyPropertyChanged
+    )
+        where TViewModel : INotifyPropertyChanged
     {
         if (setter != null)
         {
@@ -253,7 +254,8 @@ public static class BindingExtensions
         string propertyName,
         Func<TViewModel, bool> getter,
         Action<TViewModel, bool>? setter = null
-    ) where TViewModel : INotifyPropertyChanged
+    )
+        where TViewModel : INotifyPropertyChanged
     {
         if (setter != null)
         {
@@ -263,7 +265,10 @@ public static class BindingExtensions
                 val => setter(viewModel, val),
                 handler => target.ValueChanged += (s, e) => handler(),
                 () => target.Value == Terminal.Gui.Views.CheckState.Checked,
-                val => target.Value = val ? Terminal.Gui.Views.CheckState.Checked : Terminal.Gui.Views.CheckState.UnChecked,
+                val =>
+                    target.Value = val
+                        ? Terminal.Gui.Views.CheckState.Checked
+                        : Terminal.Gui.Views.CheckState.UnChecked,
                 propertyName
             );
         }
@@ -272,7 +277,10 @@ public static class BindingExtensions
             return viewModel.Bind(
                 target,
                 getter,
-                val => target.Value = val ? Terminal.Gui.Views.CheckState.Checked : Terminal.Gui.Views.CheckState.UnChecked,
+                val =>
+                    target.Value = val
+                        ? Terminal.Gui.Views.CheckState.Checked
+                        : Terminal.Gui.Views.CheckState.UnChecked,
                 propertyName
             );
         }
@@ -286,14 +294,10 @@ public static class BindingExtensions
         TViewModel viewModel,
         string propertyName,
         Func<TViewModel, bool> getter
-    ) where TViewModel : INotifyPropertyChanged
+    )
+        where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(
-            target,
-            getter,
-            val => target.Visible = val,
-            propertyName
-        );
+        return viewModel.Bind(target, getter, val => target.Visible = val, propertyName);
     }
 
     /// <summary>
@@ -304,14 +308,10 @@ public static class BindingExtensions
         TViewModel viewModel,
         string propertyName,
         Func<TViewModel, bool> getter
-    ) where TViewModel : INotifyPropertyChanged
+    )
+        where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(
-            target,
-            getter,
-            val => target.Enabled = val,
-            propertyName
-        );
+        return viewModel.Bind(target, getter, val => target.Enabled = val, propertyName);
     }
 
     /// <summary>
@@ -321,7 +321,8 @@ public static class BindingExtensions
         this Button target,
         TViewModel viewModel,
         ICommand command
-    ) where TViewModel : INotifyPropertyChanged
+    )
+        where TViewModel : INotifyPropertyChanged
     {
         return command.BindCommand(target);
     }

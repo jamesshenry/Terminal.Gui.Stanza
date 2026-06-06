@@ -13,7 +13,13 @@ public partial class StatsSection : FrameView
     public Label CountDisplay { get; set; } = new();
 
     [BindCommand(nameof(DashboardViewModel.IncrementLoginsCommand))]
-    public Button AddLoginBtn { get; set; } = new() { Text = "Log Visit", X = Pos.Center() };
+    public Button AddLoginBtn { get; set; } =
+        new()
+        {
+            Text = "Log Visit",
+            X = Pos.Center(),
+            Visible = true,
+        };
 
     public StatsSection()
     {

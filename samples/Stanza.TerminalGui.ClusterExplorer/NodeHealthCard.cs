@@ -34,7 +34,8 @@ public partial class NodeHealthCard : FrameView
         Add(NodeTitle, NodeIpLabel, CpuMeter, RamMeter);
     }
 
-    public NodeHealthCard(ClusterExplorerViewModel viewModel) : this()
+    public NodeHealthCard(ClusterExplorerViewModel viewModel)
+        : this()
     {
         this.ViewModel = viewModel;
         CpuMeter.ViewModel = viewModel;

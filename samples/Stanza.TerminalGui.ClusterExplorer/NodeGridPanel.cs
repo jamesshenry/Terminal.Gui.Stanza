@@ -24,7 +24,8 @@ public partial class NodeGridPanel : FrameView
         Add(PrimaryNodeCard, HistoryPanel);
     }
 
-    public NodeGridPanel(ClusterExplorerViewModel viewModel) : this()
+    public NodeGridPanel(ClusterExplorerViewModel viewModel)
+        : this()
     {
         this.ViewModel = viewModel;
         PrimaryNodeCard.ViewModel = viewModel;

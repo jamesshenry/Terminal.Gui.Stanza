@@ -28,7 +28,8 @@ public partial class ClusterExplorerWindow : Window
         Add(NodeGrid, FooterStatusBar);
     }
 
-    public ClusterExplorerWindow(ClusterExplorerViewModel viewModel) : this()
+    public ClusterExplorerWindow(ClusterExplorerViewModel viewModel)
+        : this()
     {
         this.ViewModel = viewModel;
         NodeGrid.ViewModel = viewModel;

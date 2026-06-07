@@ -1,3 +1,4 @@
+using Stanza.TerminalGui.ClusterExplorer;
 using Terminal.Gui.App;
 
 var app = Application.Create();

@@ -15,9 +15,8 @@ public partial class ProfileViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial bool HasAcceptedTerms { get; set; }
 
-    public string Greeting => $"Hello, {Name}!" + (IsOpenSourceContributor ? " ❤️" : "");
+    public string Greeting => $"Hello, {Name}!" + (IsOpenSourceContributor ? " ❤️ " : "");
 
-    // Notice: We notify the greeting changed whenever Name or Contributor status changes
     partial void OnNameChanged(string value) => OnPropertyChanged(nameof(Greeting));
 
     partial void OnIsOpenSourceContributorChanged(bool value) =>
@@ -26,9 +25,7 @@ public partial class ProfileViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasAcceptedTerms))]
     private async Task Save()
     {
-        // Simulate a background save operation (Thread Safety Test)
         await Task.Delay(1000);
-        // This update is marshalled to the UI thread by Stanza automatically
         Name = Name.ToUpper();
     }
 }

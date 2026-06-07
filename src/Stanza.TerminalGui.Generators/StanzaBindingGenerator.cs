@@ -65,7 +65,7 @@ public class StanzaBindingGenerator : IIncrementalGenerator
         // 2. STN011: Structural Check - Inherits from View
         // We check both the specific namespace and the short name to be resilient in test environments
         if (
-            !IsSubtypeOf(classSymbol, "Terminal.Gui.ViewBase.View")
+            !classSymbol.IsSubtypeOf("Terminal.Gui.ViewBase.View")
             && classSymbol.BaseType?.Name != "View"
         )
         {
@@ -159,17 +159,36 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                     continue;
 
                 // STN020: Resolution - Search the full hierarchy for the property
-                var vmProperty = FindPropertyInHierarchy(vmTypeSymbol, vmPropName!);
+                var vmProperty = vmTypeSymbol.FindPropertyInHierarchy(vmPropName);
                 if (vmProperty == null)
                 {
-                    diagnostics.Add(
-                        Diagnostic.Create(
-                            StanzaDiagnostics.PropertyNotFound,
-                            attrLocation,
-                            vmPropName,
-                            vmType
-                        )
-                    );
+                    // Heuristic: Is this a CommunityToolkit Command that hasn't been generated yet?
+                    bool isLikelyGeneratedCommand =
+                        bindingType == "BindCommand"
+                        && (vmPropName?.EndsWith("Command") == true)
+                        && vmTypeSymbol
+                            .GetMembers(
+                                vmPropName.Substring(0, vmPropName.Length - "Command".Length)
+                            )
+                            .Any(m => m is IMethodSymbol);
+
+                    // If it's not a known generated pattern, we should warn the user
+                    if (!isLikelyGeneratedCommand)
+                    {
+                        diagnostics.Add(
+                            Diagnostic.Create(
+                                StanzaDiagnostics.PropertyNotFound,
+                                attrLocation,
+                                vmPropName,
+                                vmType
+                            )
+                        );
+                    }
+
+                    // Even if it's likely generated, we must proceed with caution.
+                    // We'll add it to the IR because the emitted code will use the string name anyway.
+                    // If the property TRULY doesn't exist, the final C# compilation of the .g.cs will fail.
+                    bindings.Add(new BindingIR(member.Name, bindingType, vmPropName!, "OneWay"));
                     continue;
                 }
 
@@ -281,29 +300,5 @@ public class StanzaBindingGenerator : IIncrementalGenerator
             new ViewIR(ns, classSymbol.Name, vmType, bindings.ToImmutable()),
             diagnostics.ToImmutable()
         );
-    }
-
-    private static IPropertySymbol? FindPropertyInHierarchy(ITypeSymbol? type, string name)
-    {
-        while (type != null)
-        {
-            var prop = type.GetMembers(name).OfType<IPropertySymbol>().FirstOrDefault();
-            if (prop != null)
-                return prop;
-            type = type.BaseType;
-        }
-        return null;
-    }
-
-    private static bool IsSubtypeOf(INamedTypeSymbol symbol, string fullyQualifiedBaseName)
-    {
-        var current = symbol.BaseType;
-        while (current != null)
-        {
-            if (current.ToDisplayString() == fullyQualifiedBaseName)
-                return true;
-            current = current.BaseType;
-        }
-        return false;
     }
 }

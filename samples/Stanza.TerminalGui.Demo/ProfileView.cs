@@ -27,7 +27,6 @@ public partial class ProfileView : Window
         Title = "Developer Profile Editor";
         ViewModel = viewModel;
 
-        // Layout using standard Terminal.Gui Pos/Dim
         NameInput.X = Pos.Center();
         NameInput.Y = 2;
 

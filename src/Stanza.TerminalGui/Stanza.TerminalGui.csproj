@@ -10,4 +10,27 @@
     <!-- <PackageReference Include="CommunityToolkit.Mvvm" /> -->
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the generator project, but don't treat it as a runtime dependency -->
+    <ProjectReference
+      Include="..\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj"
+      ReferenceOutputAssembly="false"
+      OutputItemType="Analyzer"
+    />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Tell the runtime project to include the output of the generator project in the analyzers folder of its package -->
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToPackage</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="_AddAnalyzersToPackage">
+    <ItemGroup>
+      <TfmSpecificPackageFile
+        Include="$(ProjectDir)..\..\.artifacts\bin\Stanza.TerminalGui.Generators\$(Configuration)\Stanza.TerminalGui.Generators.dll"
+        PackagePath="analyzers/dotnet/cs"
+      />
+    </ItemGroup>
+  </Target>
 </Project>

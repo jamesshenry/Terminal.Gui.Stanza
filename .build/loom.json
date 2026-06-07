@@ -13,14 +13,11 @@
     "Stanza.TerminalGui": {
       "project": "src\\Stanza.TerminalGui\\Stanza.TerminalGui.csproj",
       "type": "Nuget"
-    },
-    "Stanza.TerminalGui.Generators": {
-      "project": "src\\Stanza.TerminalGui.Generators\\Stanza.TerminalGui.Generators.csproj",
-      "type": "Nuget"
     }
   },
   "global": {
-    "target": "Build"
+    "target": "Build",
+    "configuration": "Release"
   },
   "nuget": {
     "apiKey": ""

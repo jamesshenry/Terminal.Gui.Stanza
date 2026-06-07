@@ -8,7 +8,7 @@
     <PackageId>Stanza.TerminalGui</PackageId>
     <Title>Stanza for Terminal.Gui</Title>
     <Authors>jamesshenry</Authors>
-    <Description>A high-performance, reflection-free MVVM binding library for Terminal.Gui v2. Utilizing Source Generators for NativeAOT compatibility and zero-boilerplate development.</Description>
+    <Description>A high-performance, reflection-free MVVM binding-helper library for Terminal.Gui v2. Utilizing Source Generators for NativeAOT compatibility and zero-boilerplate development.</Description>
     <PackageTags>tui;mvvm;source-generator;nativeaot;terminal</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/jamesshenry/Stanza.TerminalGui</PackageProjectUrl>

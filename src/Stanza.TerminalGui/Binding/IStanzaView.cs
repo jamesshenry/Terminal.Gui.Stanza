@@ -5,7 +5,7 @@ namespace Stanza.TerminalGui;
 /// <summary>
 /// Defines the core contract for a Stanza-managed View.
 /// This interface is typically implemented automatically by the Source Generator
-/// for classes decorated with <see cref="StanzaViewAttribute"/>.
+/// for classes decorated with <see cref="StanzaViewAttribute{TViewModel}"/>.
 /// </summary>
 /// <typeparam name="TViewModel">The type of the ViewModel, which must implement <see cref="INotifyPropertyChanged"/>.</typeparam>
 public interface IStanzaView<TViewModel> : IDisposable

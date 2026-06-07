@@ -163,7 +163,7 @@ public static class TestHelper
     ) RunGenerator(string source)
     {
         // Force the JIT/runtime to load the dependent assemblies into the AppDomain
-        _ = typeof(Stanza.TerminalGui.StanzaViewAttribute).Assembly;
+        _ = typeof(Stanza.TerminalGui.StanzaViewAttribute<>).Assembly;
         _ = typeof(CommunityToolkit.Mvvm.ComponentModel.ObservableObject).Assembly;
         _ = typeof(Terminal.Gui.Views.Label).Assembly;
         _ = typeof(Stanza.TerminalGui.IStanzaView<>).Assembly;

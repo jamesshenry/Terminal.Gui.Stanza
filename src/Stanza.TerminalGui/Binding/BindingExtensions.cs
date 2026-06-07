@@ -18,55 +18,21 @@ namespace Stanza.TerminalGui;
 /// </remarks>
 public static class BindingExtensions
 {
-    extension(View view)
-    {
-        public string BindText
-        {
-            get => string.Empty;
-            set { }
-        }
-        public string BindChecked
-        {
-            get => string.Empty;
-            set { }
-        }
-        public string BindValue
-        {
-            get => string.Empty;
-            set { }
-        }
-        public string BindCommand
-        {
-            get => string.Empty;
-            set { }
-        }
-        public string BindVisible
-        {
-            get => string.Empty;
-            set { }
-        }
-        public string BindEnabled
-        {
-            get => string.Empty;
-            set { }
-        }
-    }
-
     /// <summary>
     /// Establishes a thread-safe, one-way binding between a ViewModel property and a UI update action.
-    /// Automatically marshals property updates to the Terminal.Gui Main Loop using the provided <paramref name="dispatcher"/>.
+    /// Automatically marshals property updates to the Terminal.Gui Main Loop using the provided <paramref name="view"/>.
     /// </summary>
     /// <typeparam name="TViewModel">The type of the ViewModel, which must implement <see cref="INotifyPropertyChanged"/>.</typeparam>
     /// <typeparam name="TValue">The type of the property value being bound.</typeparam>
     /// <param name="viewModel">The ViewModel instance containing the source property.</param>
-    /// <param name="dispatcher">The <see cref="View"/> used to access the application main loop for thread-safe UI updates.</param>
+    /// <param name="view">The <see cref="View"/> used to access the application main loop for thread-safe UI updates.</param>
     /// <param name="propertyExpression">A lambda expression used to retrieve the current property value from the ViewModel.</param>
     /// <param name="updateUi">An action executed on the UI thread whenever the property value changes.</param>
     /// <param name="expression">The string representation of the property expression, automatically captured at compile-time via <see cref="CallerArgumentExpressionAttribute"/>.</param>
     /// <returns>An <see cref="IDisposable"/> that removes the property change subscription and stops UI synchronization when disposed.</returns>
     public static IDisposable Bind<TViewModel, TValue>(
-        this TViewModel viewModel,
-        View dispatcher,
+        this View view,
+        TViewModel viewModel,
         Func<TViewModel, TValue> propertyExpression,
         Action<TValue> updateUi,
         [CallerArgumentExpression(nameof(propertyExpression))] string? expression = null
@@ -75,16 +41,14 @@ public static class BindingExtensions
     {
         string propertyName = ExtractPropertyName(expression);
 
-        // 1. Subscribe to property changes [1]
         PropertyChangedEventHandler handler = (sender, e) =>
         {
             if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
             {
                 var newValue = propertyExpression(viewModel);
 
-                // Safe UI thread marshalling [1]
-                if (dispatcher.App != null)
-                    dispatcher.App.Invoke(() => updateUi(newValue));
+                if (view.App != null)
+                    view.App.Invoke(() => updateUi(newValue));
                 else
                     updateUi(newValue);
             }
@@ -92,14 +56,12 @@ public static class BindingExtensions
 
         viewModel.PropertyChanged += handler;
 
-        // 2. Perform initial synchronization [1]
         var initialValue = propertyExpression(viewModel);
-        if (dispatcher.App != null)
-            dispatcher.App.Invoke(() => updateUi(initialValue));
+        if (view.App != null)
+            view.App.Invoke(() => updateUi(initialValue));
         else
             updateUi(initialValue);
 
-        // 3. Return cleanup token [1]
         return new DisposableAction(() => viewModel.PropertyChanged -= handler);
     }
 
@@ -111,7 +73,7 @@ public static class BindingExtensions
     /// <param name="command">The command to execute.</param>
     /// <param name="button">The target button that will trigger the command and reflect its enabled state.</param>
     /// <returns>An <see cref="IDisposable"/> that unhooks the command and button events when disposed.</returns>
-    public static IDisposable BindCommand(this ICommand command, Button button)
+    public static IDisposable BindCommand(this Button button, ICommand command)
     {
         void UpdateEnabled(object? s, EventArgs e)
         {
@@ -126,7 +88,6 @@ public static class BindingExtensions
         command.CanExecuteChanged += UpdateEnabled;
         button.Accepting += OnAccept;
 
-        // Initial sync [1]
         UpdateEnabled(null, EventArgs.Empty);
 
         return new DisposableAction(() =>
@@ -140,8 +101,8 @@ public static class BindingExtensions
     /// Establishes a thread-safe, two-way binding between a ViewModel property and a UI element.
     /// </summary>
     public static IDisposable BindTwoWay<TViewModel, TValue>(
-        this TViewModel viewModel,
-        View dispatcher,
+        this View view,
+        TViewModel viewModel,
         Func<TViewModel, TValue> vmGetter,
         Action<TValue> vmSetter,
         Action<Action> subscribeUiChange,
@@ -154,9 +115,8 @@ public static class BindingExtensions
         string propertyName = ExtractPropertyName(expression);
         bool updating = false;
 
-        // 1. VM -> UI (Uses your existing One-Way logic)
-        var vmToUi = viewModel.Bind(
-            dispatcher,
+        var vmToUi = view.Bind(
+            viewModel,
             vmGetter,
             val =>
             {
@@ -175,8 +135,6 @@ public static class BindingExtensions
             expression
         );
 
-        // 2. UI -> VM
-        // The subscribeUiChange action should hook into events like TextChanged or ValueChanged
         var uiHandler = new Action(() =>
         {
             if (updating)
@@ -199,12 +157,9 @@ public static class BindingExtensions
 
         subscribeUiChange(uiHandler);
 
-        // 3. Cleanup
         return new DisposableAction(() =>
         {
             vmToUi.Dispose();
-            // Note: This primitive assumes the UI event unsubscription
-            // is handled by the caller or by the View's lifecycle.
         });
     }
 
@@ -214,7 +169,7 @@ public static class BindingExtensions
     /// Generator target for text binding.
     /// </summary>
     public static IDisposable ApplyBindText<TViewModel>(
-        this View target,
+        this View view,
         TViewModel viewModel,
         string propertyName,
         Func<TViewModel, object> getter,
@@ -224,22 +179,22 @@ public static class BindingExtensions
     {
         if (setter != null)
         {
-            return viewModel.BindTwoWay(
-                target,
+            return view.BindTwoWay(
+                viewModel,
                 getter,
                 val => setter(viewModel, val?.ToString() ?? string.Empty),
-                handler => target.TextChanged += (s, e) => handler(),
-                () => target.Text?.ToString() ?? string.Empty,
-                val => target.Text = val?.ToString() ?? string.Empty,
+                handler => view.TextChanged += (s, e) => handler(),
+                () => view.Text?.ToString() ?? string.Empty,
+                val => view.Text = val?.ToString() ?? string.Empty,
                 propertyName
             );
         }
         else
         {
-            return viewModel.Bind(
-                target,
+            return view.Bind(
+                viewModel,
                 getter,
-                val => target.Text = val?.ToString() ?? string.Empty,
+                val => view.Text = val?.ToString() ?? string.Empty,
                 propertyName
             );
         }
@@ -259,28 +214,22 @@ public static class BindingExtensions
     {
         if (setter != null)
         {
-            return viewModel.BindTwoWay(
-                target,
+            return target.BindTwoWay(
+                viewModel,
                 getter,
                 val => setter(viewModel, val),
                 handler => target.ValueChanged += (s, e) => handler(),
-                () => target.Value == Terminal.Gui.Views.CheckState.Checked,
-                val =>
-                    target.Value = val
-                        ? Terminal.Gui.Views.CheckState.Checked
-                        : Terminal.Gui.Views.CheckState.UnChecked,
+                () => target.Value == CheckState.Checked,
+                val => target.Value = val ? CheckState.Checked : CheckState.UnChecked,
                 propertyName
             );
         }
         else
         {
-            return viewModel.Bind(
-                target,
+            return target.Bind(
+                viewModel,
                 getter,
-                val =>
-                    target.Value = val
-                        ? Terminal.Gui.Views.CheckState.Checked
-                        : Terminal.Gui.Views.CheckState.UnChecked,
+                val => target.Value = val ? CheckState.Checked : CheckState.UnChecked,
                 propertyName
             );
         }
@@ -297,7 +246,7 @@ public static class BindingExtensions
     )
         where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(target, getter, val => target.Visible = val, propertyName);
+        return target.Bind(viewModel, getter, val => target.Visible = val, propertyName);
     }
 
     /// <summary>
@@ -311,20 +260,15 @@ public static class BindingExtensions
     )
         where TViewModel : INotifyPropertyChanged
     {
-        return viewModel.Bind(target, getter, val => target.Enabled = val, propertyName);
+        return target.Bind(viewModel, getter, val => target.Enabled = val, propertyName);
     }
 
     /// <summary>
     /// Generator target for command binding.
     /// </summary>
-    public static IDisposable ApplyBindCommand<TViewModel>(
-        this Button target,
-        TViewModel viewModel,
-        ICommand command
-    )
-        where TViewModel : INotifyPropertyChanged
+    public static IDisposable ApplyBindCommand(this Button target, ICommand command)
     {
-        return command.BindCommand(target);
+        return target.BindCommand(command);
     }
 
     #endregion
@@ -342,13 +286,11 @@ public static class BindingExtensions
             return "Text";
         }
 
-        // 1. Strip the lambda arrow operator (e.g. "() => viewModel.Name" or "vm => vm.Name")
         if (expression.Contains("=>"))
         {
             expression = expression.Split(["=>"], StringSplitOptions.None).Last().Trim();
         }
 
-        // 2. Extract final property name after any dots (e.g. "viewModel.Name" -> "Name")
         string propertyName = expression.Split('.').Last().Trim('(', ')', ' ');
 
         return propertyName;

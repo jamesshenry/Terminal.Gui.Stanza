@@ -5,4 +5,7 @@
     <Project Path="src/Stanza.TerminalGui.Generators/Stanza.TerminalGui.Generators.csproj" />
     <Project Path="src/Stanza.TerminalGui.Generators.Tests/Stanza.TerminalGui.Generators.Tests.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Stanza.TerminalGui.ClusterExplorer/Stanza.TerminalGui.ClusterExplorer.csproj" />
+  </Folder>
 </Solution>

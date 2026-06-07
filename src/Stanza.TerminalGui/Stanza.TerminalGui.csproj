@@ -7,12 +7,10 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <!-- <PackageReference Include="CommunityToolkit.Mvvm" /> -->
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Reference the generator project, but don't treat it as a runtime dependency -->
     <ProjectReference
       Include="..\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj"
       ReferenceOutputAssembly="false"
@@ -21,7 +19,6 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <!-- Tell the runtime project to include the output of the generator project in the analyzers folder of its package -->
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 

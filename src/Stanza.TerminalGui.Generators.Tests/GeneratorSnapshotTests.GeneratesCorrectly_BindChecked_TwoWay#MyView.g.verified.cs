@@ -29,7 +29,7 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         _bindingContext = new BindingContext();
         if (_viewModel == null) return;
 
-        _bindingContext.AddBinding(MyLabel.ApplyBindText(_viewModel, "Name", x => x.Name, (x, val) => x.Name = val));
+        _bindingContext.AddBinding(MyCheckBox.ApplyBindChecked(_viewModel, "IsChecked", x => x.IsChecked, (x, val) => x.IsChecked = val));
         OnApplyBindings(_bindingContext);
     }
 

@@ -5,7 +5,7 @@ Rule ID | Category | Severity | Notes
 STN010 | Usage    | Error    | Class must be partial.
 STN011 | Usage    | Error    | Must inherit from Terminal.Gui.View.
 STN012 | Usage    | Error    | Member name collision with generated plumbing.
-STN020 | Stanza.Binding  | Error    | Property name not found on ViewModel.
+STN020 | Stanza.Binding  | Warning    | Property name not found on ViewModel.
 STN021 | Stanza.Binding  | Error    | Property found but not accessible.
 STN022 | Stanza.Binding  | Error    | BindCommand target is not ICommand.
 STN004 | Stanza.Binding  | Error    | Read-only property cannot have explicit TwoWay binding.

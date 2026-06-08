@@ -29,7 +29,7 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         _bindingContext = new BindingContext();
         if (_viewModel == null) return;
 
-        _bindingContext.AddBinding(MyLabel.ApplyBindText(_viewModel, "Name", x => x.Name, (x, val) => x.Name = val));
+        _bindingContext.AddBinding(MyLabel.ApplyBindVisible(_viewModel, "ShowElement", x => x.ShowElement));
         OnApplyBindings(_bindingContext);
     }
 

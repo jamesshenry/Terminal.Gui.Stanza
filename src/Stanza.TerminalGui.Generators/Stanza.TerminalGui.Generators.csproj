@@ -4,12 +4,35 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+
+    <!-- Required for Analyzers/Generators -->
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IsRoslynComponent>true</IsRoslynComponent>
+
+    <!-- Packaging Settings -->
+    <!-- This tells NuGet that this project doesn't provide a runtime library -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- Suppress warnings about the empty lib folder -->
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <!-- Marks the package as a development-only dependency -->
+    <DevelopmentDependency>true</DevelopmentDependency>
+
+    <PackageId>Stanza.TerminalGui.Generators</PackageId>
+    <Authors>YourName</Authors>
+    <Description>Source generator for Stanza.TerminalGui MVVM bindings.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- This is the "Magic" that puts the DLL in the right place for NuGet to recognize it as a generator -->
+    <None
+      Include="$(OutputPath)\$(AssemblyName).dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false"
+    />
   </ItemGroup>
   <ItemGroup>
     <!-- Compile shared IR files directly into the analyzer to keep it zero-dependency and netstandard2.0 compatible -->

@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Stanza.TerminalGui.Generators;
 using Terminal.Gui;
 using VerifyTests;
@@ -14,16 +12,17 @@ namespace Stanza.TerminalGui.Generators.Tests;
 public class GeneratorSnapshotTests
 {
     [Test]
-    public Task GeneratesCorrectly()
+    public Task GeneratesCorrectly_BindText_TwoWay()
     {
         var source = """
 using Stanza.TerminalGui;
 using Terminal.Gui.Views;
 using Terminal.Gui.ViewBase;
+using CommunityToolkit.Mvvm.ComponentModel; // For ObservableObject
 
 namespace TestNamespace;
 
-public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public partial class MyViewModel : ObservableObject
 {
     public string Name { get; set; }
 }
@@ -36,33 +35,7 @@ public partial class MyView : View
 }
 """;
 
-        return TestHelper.Verify(source);
-    }
-
-    [Test]
-    public Task GeneratesWithGenericAttribute()
-    {
-        var source = """
-using Stanza.TerminalGui;
-using Terminal.Gui.Views;
-using Terminal.Gui.ViewBase;
-
-namespace TestNamespace;
-
-public partial class MyViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-    public string Name { get; set; }
-}
-
-[StanzaView<MyViewModel>]
-public partial class MyView : View
-{
-    [BindText(nameof(MyViewModel.Name))]
-    public Label MyLabel { get; set; } = new() { Text = "Hello" };
-}
-""";
-
-        return TestHelper.Verify(source);
+        return TestHelper.VerifyGenerator(source);
     }
 
     [Test]
@@ -101,111 +74,161 @@ public partial class ReadOnlyBindingView : View
             .That(generated.Contains("(x, val) => x.Name = val", StringComparison.Ordinal))
             .IsFalse();
     }
+
+    [Test]
+    public Task GeneratesCorrectly_BindCommand()
+    {
+        var source = """
+using Stanza.TerminalGui;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace TestNamespace;
+
+public partial class MyViewModel : ObservableObject
+{
+    [RelayCommand]
+    private void Save() { } // CommunityToolkit will generate SaveCommand
 }
 
-public static class TestHelper
+[StanzaView<MyViewModel>]
+public partial class MyView : View
 {
-    public static Task Verify(string source)
-    {
-        var (driver, _, runResult, compileDiagnostics) = RunGenerator(source);
-
-        if (runResult.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
-        {
-            throw new Exception("Generator errors: " + string.Join("\n", runResult.Diagnostics));
-        }
-
-        if (compileDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
-        {
-            throw new Exception(
-                "Compilation errors:\n"
-                    + string.Join(
-                        "\n",
-                        compileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error)
-                    )
-            );
-        }
-
-        return Verifier.Verify(driver);
+    [BindCommand(nameof(MyViewModel.SaveCommand))]
+    public Button SaveButton { get; set; } = new();
+}
+""";
+        return TestHelper.VerifyGenerator(source, "CS0117", "CS1061");
     }
 
-    public static IReadOnlyList<Diagnostic> VerifyDiagnostics(string source)
+    [Test]
+    public Task GeneratesCorrectly_BindChecked_TwoWay()
     {
-        var (_, _, runResult, _) = RunGenerator(source);
-        return runResult.Diagnostics;
+        var source = """
+using Stanza.TerminalGui;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace TestNamespace;
+
+public partial class MyViewModel : ObservableObject
+{
+    public bool IsChecked { get; set; }
+}
+
+[StanzaView<MyViewModel>]
+public partial class MyView : View
+{
+    [BindChecked(nameof(MyViewModel.IsChecked))]
+    public CheckBox MyCheckBox { get; set; } = new();
+}
+""";
+        return TestHelper.VerifyGenerator(source);
     }
 
-    public static IReadOnlyList<Diagnostic> GetCompileDiagnostics(string source)
+    [Test]
+    public Task GeneratesCorrectly_BindVisible_OneWay()
     {
-        var (_, _, _, compileDiagnostics) = RunGenerator(source);
-        return compileDiagnostics;
+        var source = """
+using Stanza.TerminalGui;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace TestNamespace;
+
+public partial class MyViewModel : ObservableObject
+{
+    public bool ShowElement { get; set; }
+}
+
+[StanzaView<MyViewModel>]
+public partial class MyView : View
+{
+    [BindVisible(nameof(MyViewModel.ShowElement))]
+    public Label MyLabel { get; set; } = new();
+}
+""";
+        return TestHelper.VerifyGenerator(source);
     }
 
-    public static string GetGeneratedSource(string source, string hintName)
+    [Test]
+    public Task GeneratesCorrectly_BindEnabled_OneWay()
     {
-        var (_, _, runResult, _) = RunGenerator(source);
-        var generated = runResult
-            .Results.SelectMany(r => r.GeneratedSources)
-            .FirstOrDefault(gs => gs.HintName == hintName);
+        var source = """
+using Stanza.TerminalGui;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using CommunityToolkit.Mvvm.ComponentModel;
 
-        if (generated.HintName is null)
-        {
-            throw new InvalidOperationException($"Generated source '{hintName}' was not found.");
-        }
+namespace TestNamespace;
 
-        return generated.SourceText.ToString();
+public partial class MyViewModel : ObservableObject
+{
+    public bool CanEdit { get; set; }
+}
+
+[StanzaView<MyViewModel>]
+public partial class MyView : View
+{
+    [BindEnabled(nameof(MyViewModel.CanEdit))]
+    public TextField MyTextField { get; set; } = new();
+}
+""";
+        return TestHelper.VerifyGenerator(source);
     }
 
-    private static (
-        GeneratorDriver Driver,
-        CSharpCompilation Compilation,
-        GeneratorDriverRunResult RunResult,
-        IReadOnlyList<Diagnostic> CompileDiagnostics
-    ) RunGenerator(string source)
+    [Test]
+    public Task GeneratesCorrectly_WithNoBindings()
     {
-        // Force the JIT/runtime to load the dependent assemblies into the AppDomain
-        _ = typeof(Stanza.TerminalGui.StanzaViewAttribute).Assembly;
-        _ = typeof(CommunityToolkit.Mvvm.ComponentModel.ObservableObject).Assembly;
-        _ = typeof(Terminal.Gui.Views.Label).Assembly;
-        _ = typeof(Stanza.TerminalGui.IStanzaView<>).Assembly;
+        var source = """
+using Stanza.TerminalGui;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using CommunityToolkit.Mvvm.ComponentModel;
 
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(
-            source,
-            new CSharpParseOptions(LanguageVersion.Preview)
-        );
+namespace TestNamespace;
 
-        // Dynamically get all currently loaded assemblies in the AppDomain to populate compilation references
-        var references = AppDomain
-            .CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
-            .Select(a => MetadataReference.CreateFromFile(a.Location))
-            .Cast<MetadataReference>()
-            .ToList();
+public partial class MyViewModel : ObservableObject
+{
+    public string Name { get; set; }
+}
 
-        CSharpCompilation compilation = CSharpCompilation.Create(
-            assemblyName: "Tests",
-            syntaxTrees: new[] { syntaxTree },
-            references: references,
-            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
-        );
+[StanzaView<MyViewModel>]
+public partial class MyView : View
+{
+    // No bindings here
+    public Label MyLabel { get; set; } = new();
+}
+""";
+        return TestHelper.VerifyGenerator(source);
+    }
 
-        var generator = new StanzaBindingGenerator();
+    [Test]
+    public Task GeneratesCorrectly_GlobalNamespace()
+    {
+        var source = """
+using Stanza.TerminalGui;
+using Terminal.Gui.Views;
+using Terminal.Gui.ViewBase;
+using CommunityToolkit.Mvvm.ComponentModel;
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            new[] { generator.AsSourceGenerator() },
-            parseOptions: new CSharpParseOptions(LanguageVersion.Preview)
-        );
+public partial class GlobalViewModel : ObservableObject
+{
+    public string Status { get; set; }
+}
 
-        driver = driver.RunGenerators(compilation);
-
-        var runResult = driver.GetRunResult();
-        // Add the generated trees to the compilation to do final semantic checking
-        var finalCompilation = compilation;
-        foreach (var generatedTree in runResult.GeneratedTrees)
-        {
-            finalCompilation = finalCompilation.AddSyntaxTrees(generatedTree);
-        }
-
-        var compileDiagnostics = finalCompilation.GetDiagnostics();
-        return (driver, compilation, runResult, compileDiagnostics);
+[StanzaView<GlobalViewModel>]
+public partial class GlobalView : View
+{
+    [BindText(nameof(GlobalViewModel.Status))]
+    public Label StatusLabel { get; set; } = new();
+}
+""";
+        return TestHelper.VerifyGenerator(source);
     }
 }

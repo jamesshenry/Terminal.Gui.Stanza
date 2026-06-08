@@ -42,7 +42,7 @@ public static class StanzaDiagnostics
         title: "ViewModel property not found",
         messageFormat: "The property '{0}' was not found on ViewModel type '{1}'",
         category: Category,
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 

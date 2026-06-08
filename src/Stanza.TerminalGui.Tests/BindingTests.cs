@@ -31,7 +31,7 @@ public partial class BindingTests
         var uiValue = "";
 
         // Act - Note: Bind signature changed to require dispatcher and vm-parameterized lambda
-        using var binding = vm.Bind(dispatcher, x => x.Name, val => uiValue = val);
+        using var binding = dispatcher.Bind(vm, x => x.Name, val => uiValue = val);
 
         // Assert - Initial Value (Bind fires immediately)
         await Assert.That(uiValue).IsEqualTo("Initial");
@@ -50,7 +50,7 @@ public partial class BindingTests
         var vm = new FakeViewModel { Name = "Initial" };
         var dispatcher = new View();
         var uiValue = "";
-        var binding = vm.Bind(dispatcher, x => x.Name, val => uiValue = val);
+        var binding = dispatcher.Bind(vm, x => x.Name, val => uiValue = val);
 
         // Act
         binding.Dispose();
@@ -68,7 +68,7 @@ public partial class BindingTests
         var button = new Button();
 
         // Act - Using updated signature: command.BindCommand(button)
-        using var binding = vm.SaveCommand.BindCommand(button);
+        using var binding = button.BindCommand(vm.SaveCommand);
 
         // Simulate Button Accept/Click
         button.InvokeCommand(Command.Accept);
@@ -88,8 +88,8 @@ public partial class BindingTests
         var uiValue2 = "";
 
         // Use the new AddTo fluent extension as well
-        vm.Bind(dispatcher, x => x.Name, val => uiValue1 = val).AddTo(ctx);
-        vm.Bind(dispatcher, x => x.Name, val => uiValue2 = val).AddTo(ctx);
+        dispatcher.Bind(vm, x => x.Name, val => uiValue1 = val).AddTo(ctx);
+        dispatcher.Bind(vm, x => x.Name, val => uiValue2 = val).AddTo(ctx);
 
         // Act
         ctx.Dispose();
@@ -139,7 +139,7 @@ public partial class BindingTests
         var dispatcher = textField;
 
         // 1. VM -> UI (One Way)
-        using var binding = vm.Bind(dispatcher, x => x.Name, val => textField.Text = val);
+        using var binding = dispatcher.Bind(vm, x => x.Name, val => textField.Text = val);
 
         // 2. UI -> VM (Manual hook since no BindTwoWay exists yet)
         textField.TextChanged += (s, e) =>
@@ -168,12 +168,12 @@ public partial class BindingTests
         string? capturedValue = null;
 
         // Style 1: Standard 'x'
-        using var b1 = vm.Bind(dispatcher, x => x.Name, v => capturedValue = v);
+        using var b1 = dispatcher.Bind(vm, x => x.Name, v => capturedValue = v);
         vm.Name = "Updated1";
         await Assert.That(capturedValue).IsEqualTo("Updated1");
 
         // Style 2: Different parameter name (ensures parser isn't hardcoded to 'x')
-        using var b2 = vm.Bind(dispatcher, model => model.Name, v => capturedValue = v);
+        using var b2 = dispatcher.Bind(vm, model => model.Name, v => capturedValue = v);
         vm.Name = "Updated2";
         await Assert.That(capturedValue).IsEqualTo("Updated2");
 

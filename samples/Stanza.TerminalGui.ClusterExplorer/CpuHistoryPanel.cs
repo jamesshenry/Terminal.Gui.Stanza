@@ -43,7 +43,6 @@ public partial class CpuHistoryPanel : FrameView
                 return true;
             }
         );
-
         _refreshLoopStarted = true;
     }
 

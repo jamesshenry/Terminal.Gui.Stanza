@@ -73,26 +73,39 @@ public static class BindingExtensions
     /// <param name="command">The command to execute.</param>
     /// <param name="button">The target button that will trigger the command and reflect its enabled state.</param>
     /// <returns>An <see cref="IDisposable"/> that unhooks the command and button events when disposed.</returns>
-    public static IDisposable BindCommand(this Button button, ICommand command)
+    public static IDisposable BindCommand(
+        this Button button,
+        ICommand command,
+        bool syncEnabledState = true
+    )
     {
-        void UpdateEnabled(object? s, EventArgs e)
-        {
-            if (button.App != null)
-                button.App.Invoke(() => button.Enabled = command.CanExecute(null)); // Safe marshal [1]
-            else
-                button.Enabled = command.CanExecute(null);
-        }
-
         void OnAccept(object? s, EventArgs e) => command.Execute(null);
 
-        command.CanExecuteChanged += UpdateEnabled;
         button.Accepting += OnAccept;
 
-        UpdateEnabled(null, EventArgs.Empty);
+        IDisposable? canExecuteSubscription = null;
+
+        if (syncEnabledState)
+        {
+            void UpdateEnabled(object? s, EventArgs e)
+            {
+                if (button.App != null)
+                    button.App.Invoke(() => button.Enabled = command.CanExecute(null));
+                else
+                    button.Enabled = command.CanExecute(null);
+            }
+
+            command.CanExecuteChanged += UpdateEnabled;
+            UpdateEnabled(null, EventArgs.Empty); // This is what's disabling your button
+
+            canExecuteSubscription = new DisposableAction(() =>
+                command.CanExecuteChanged -= UpdateEnabled
+            );
+        }
 
         return new DisposableAction(() =>
         {
-            command.CanExecuteChanged -= UpdateEnabled;
+            canExecuteSubscription?.Dispose();
             button.Accepting -= OnAccept;
         });
     }

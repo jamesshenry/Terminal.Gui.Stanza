@@ -45,12 +45,14 @@ public static class BindingExtensions
         {
             if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
             {
+                if (view.App is null)
+                    return;
                 var newValue = propertyExpression(viewModel);
-
-                if (view.App != null)
-                    view.App.Invoke(() => updateUi(newValue));
-                else
-                    updateUi(newValue);
+                view.App.Invoke(() =>
+                {
+                    if (view.App is not null)
+                        updateUi(newValue);
+                });
             }
         };
 

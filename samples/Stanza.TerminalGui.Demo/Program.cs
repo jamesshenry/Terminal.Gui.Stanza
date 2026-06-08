@@ -10,6 +10,8 @@ try
     builder.Configuration.Sources.Clear();
 
     builder.Services.AddSingleton<MainViewModel>();
+    builder.Services.AddSingleton<ProfileViewModel>();
+    builder.Services.AddSingleton<SettingsViewModel>();
     builder.Services.AddTransient<MainWindow>();
     builder.Services.AddSingleton(_ => Application.Create());
     builder.Services.AddSingleton<ScreenConfiguration>();

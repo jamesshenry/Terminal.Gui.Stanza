@@ -1,10 +1,10 @@
-using Stanza.TerminalGui;
 using System.Diagnostics;
+using Stanza.TerminalGui;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 [StanzaView<ProfileViewModel>]
-public partial class ProfileView : Window
+public partial class ProfileView : View
 {
     [BindText(nameof(ProfileViewModel.Name))]
     public TextField NameInput { get; set; } = new() { Width = 20 };
@@ -23,7 +23,6 @@ public partial class ProfileView : Window
 
     public ProfileView(ProfileViewModel viewModel)
     {
-        Title = "Developer Profile Editor";
         ViewModel = viewModel;
 
         NameInput.X = Pos.Center();

@@ -7,6 +7,62 @@ namespace Stanza.TerminalGui.Generators.Tests;
 public class DiagnosticTests
 {
     [Test]
+    public async Task STN005_Error_OnExplicitTwoWayReadOnly()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class MyVm : System.ComponentModel.INotifyPropertyChanged { 
+                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+                public string ReadOnlyProp => "Hello";
+            }
+
+            [StanzaView<MyVm>]
+            public partial class MyView : View {
+                [BindText(nameof(MyVm.ReadOnlyProp), Mode = BindingMode.TwoWay)]
+                public Label MyLabel { get; set; } = new();
+            }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+
+        await Assert.That(diags).Contains(d => d.Id == "STN005");
+    }
+
+    [Test]
+    public async Task STN005_Info_AutoDegradesDefaultTwoWayToOneWay()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class ReadOnlyVm : System.ComponentModel.INotifyPropertyChanged {
+                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+                public string ReadOnlyProp => "Constant";
+            }
+
+            [StanzaView<ReadOnlyVm>]
+            public partial class MyView : View {
+                [BindText("ReadOnlyProp")] // Default is TwoWay, but prop is read-only
+                public TextField MyInput { get; set; } = new();
+            }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+        var generated = TestHelper.GetGeneratedSource(source, "MyView.g.cs");
+
+        // 1. Verify the diagnostic info message
+        await Assert
+            .That(diags)
+            .Contains(d => d.Id == "STN005" && d.Severity == DiagnosticSeverity.Info);
+
+        // 2. Verify generated code does NOT have a setter lambda
+        await Assert.That(generated).Contains("x => x.ReadOnlyProp)");
+        await Assert.That(generated).DoesNotContain("val) => x.ReadOnlyProp = val");
+    }
+
+    [Test]
     public async Task STN010_Error_WhenClassIsNotPartial()
     {
         var source = """
@@ -113,29 +169,5 @@ public class DiagnosticTests
         var diags = TestHelper.VerifyDiagnostics(source);
 
         await Assert.That(diags).Contains(d => d.Id == "STN012");
-    }
-
-    [Test]
-    public async Task STN005_Error_OnExplicitTwoWayReadOnly()
-    {
-        var source = """
-            using Stanza.TerminalGui;
-            using Terminal.Gui.Views;
-
-            public class MyVm : System.ComponentModel.INotifyPropertyChanged { 
-                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
-                public string ReadOnlyProp => "Hello";
-            }
-
-            [StanzaView<MyVm>]
-            public partial class MyView : View {
-                [BindText(nameof(MyVm.ReadOnlyProp), Mode = BindingMode.TwoWay)]
-                public Label MyLabel { get; set; } = new();
-            }
-            """;
-
-        var diags = TestHelper.VerifyDiagnostics(source);
-
-        await Assert.That(diags).Contains(d => d.Id == "STN005");
     }
 }

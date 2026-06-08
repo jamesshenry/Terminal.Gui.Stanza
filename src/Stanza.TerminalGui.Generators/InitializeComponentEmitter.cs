@@ -88,7 +88,6 @@ public static class Emitter
         // Method End & Dispose
         sb.Append(
             """
-
         OnApplyBindings(_bindingContext);
     }
 

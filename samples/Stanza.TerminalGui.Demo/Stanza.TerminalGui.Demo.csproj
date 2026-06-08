@@ -5,18 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Stanza.TerminalGui\Stanza.TerminalGui.csproj" />
-    <ProjectReference
-      Include="..\..\src\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj"
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false"
-    />
+    <ProjectReference Include="..\..\src\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
 </Project>

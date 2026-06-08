@@ -1,8 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Stanza.TerminalGui.Demo;
-
 public partial class ProfileViewModel : ObservableObject
 {
     [ObservableProperty]

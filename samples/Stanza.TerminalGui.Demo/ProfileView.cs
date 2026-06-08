@@ -1,8 +1,7 @@
+using Stanza.TerminalGui;
 using System.Diagnostics;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-
-namespace Stanza.TerminalGui.Demo;
 
 [StanzaView<ProfileViewModel>]
 public partial class ProfileView : Window

@@ -180,22 +180,38 @@ public static class BindingExtensions
         if (setter != null)
         {
             return view.BindTwoWay(
-                viewModel,
-                getter,
-                val => setter(viewModel, val?.ToString() ?? string.Empty),
-                handler => view.TextChanged += (s, e) => handler(),
-                () => view.Text?.ToString() ?? string.Empty,
-                val => view.Text = val?.ToString() ?? string.Empty,
-                propertyName
+            viewModel,
+            getter,
+            val => setter(viewModel, val?.ToString() ?? string.Empty),
+            handler => view.TextChanged += (s, e) => handler(),
+            () => view.Text?.ToString() ?? string.Empty,
+            val =>
+            {
+                var newText = val?.ToString() ?? string.Empty;
+                // CRITICAL FIX: Only set if the text is actually different.
+                // This prevents the cursor-reset loop.
+                if (view.Text != newText)
+                {
+                    view.Text = newText;
+                }
+            },
+            propertyName
             );
         }
         else
         {
             return view.Bind(
-                viewModel,
-                getter,
-                val => view.Text = val?.ToString() ?? string.Empty,
-                propertyName
+            viewModel,
+            getter,
+            val =>
+            {
+                var newText = val?.ToString() ?? string.Empty;
+                if (view.Text != newText)
+                {
+                    view.Text = newText;
+                }
+            },
+            propertyName
             );
         }
     }

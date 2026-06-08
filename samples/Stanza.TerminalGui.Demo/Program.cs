@@ -1,24 +1,33 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Stanza.TerminalGui;
-using Stanza.TerminalGui.Demo;
-using Terminal.Gui;
+using Microsoft.Extensions.Hosting;
+using Stanza.TerminalGui.Layout;
 using Terminal.Gui.App;
 
-var app = Application.Create();
+try
+{
+    var builder = Host.CreateApplicationBuilder(args);
 
-// 1. Setup DI
-var services = new ServiceCollection();
-services.AddTransient<ProfileViewModel>();
-services.AddTransient<ProfileView>();
+    builder.Configuration.Sources.Clear();
 
-var serviceProvider = services.BuildServiceProvider();
+    builder.Services.AddSingleton<MainViewModel>();
+    builder.Services.AddTransient<MainWindow>();
+    builder.Services.AddSingleton(_ => Application.Create());
+    builder.Services.AddSingleton<ScreenConfiguration>();
+    using IHost host = builder.Build();
+    await Run(host);
+}
+catch (Exception ex)
+{
+    Console.WriteLine(ex);
+}
 
-// 2. Initialize Terminal.Gui
-app.Init();
+async Task Run(IHost host)
+{
+    using var app = host.Services.GetRequiredService<IApplication>();
+    app.Init();
 
-// 3. Resolve the View (DI injects the ViewModel)
-var mainView = serviceProvider.GetRequiredService<ProfileView>();
+    var mainWindow = host.Services.GetRequiredService<MainWindow>();
+    app.Run(mainWindow);
 
-// 4. Run
-app.Run(mainView);
-app.Dispose();
+    app.Dispose();
+}

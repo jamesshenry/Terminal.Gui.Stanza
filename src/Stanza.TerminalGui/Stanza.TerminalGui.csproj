@@ -22,11 +22,9 @@
   <ItemGroup>
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference
       Include="..\Stanza.TerminalGui.Generators\Stanza.TerminalGui.Generators.csproj"
@@ -34,11 +32,9 @@
       OutputItemType="Analyzer"
     />
   </ItemGroup>
-
   <PropertyGroup>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
-
   <Target Name="_AddAnalyzersToPackage">
     <ItemGroup>
       <TfmSpecificPackageFile

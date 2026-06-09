@@ -33,6 +33,35 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                 }
             }
         );
+
+        var loggingProvider = context.CompilationProvider.Select(
+            (compilation, _) =>
+            {
+                // Don't emit into the core library itself — only into consuming projects.
+                if (compilation.AssemblyName == "Stanza.TerminalGui")
+                    return (hasLogging: false, hasHost: false);
+
+                var hasLogging =
+                    compilation.GetTypeByMetadataName("Microsoft.Extensions.Logging.ILoggerFactory")
+                    != null;
+                var hasHost =
+                    compilation.GetTypeByMetadataName("Microsoft.Extensions.Hosting.IHost") != null;
+                return (hasLogging, hasHost);
+            }
+        );
+
+        context.RegisterSourceOutput(
+            loggingProvider,
+            (spc, flags) =>
+            {
+                if (!flags.hasLogging)
+                    return;
+                spc.AddSource(
+                    "StanzaLoggingExtensions.g.cs",
+                    LoggingExtensionsEmitter.Emit(flags.hasHost)
+                );
+            }
+        );
     }
 
     private static ViewParseResult GetViewIR(

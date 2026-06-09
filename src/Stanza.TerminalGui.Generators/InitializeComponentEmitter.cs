@@ -36,6 +36,7 @@ public static class Emitter
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on {{view.ClassName}}", LogLevel.Debug);
             _viewModel = value;
             StanzaConfig.Trace($"[Lifecycle] ViewModel attached to {{view.ClassName}}", LogLevel.Info); 
             ApplyBindings();
@@ -50,9 +51,21 @@ public static class Emitter
         // Binding Method Start
         sb.AppendLine("    private void ApplyBindings()");
         sb.AppendLine("    {");
+        sb.AppendLine(
+            $"        StanzaConfig.Trace(\"[Lifecycle] Disposing old bindings for {view.ClassName}\", LogLevel.Debug);"
+        );
         sb.AppendLine("        _bindingContext.Dispose();");
         sb.AppendLine("        _bindingContext = new BindingContext();");
-        sb.AppendLine("        if (_viewModel == null) return;");
+        sb.AppendLine("        if (_viewModel == null)");
+        sb.AppendLine("        {");
+        sb.AppendLine(
+            $"            StanzaConfig.Trace(\"[Lifecycle] ViewModel is null for {view.ClassName}, skipping bindings.\", LogLevel.Debug);"
+        );
+        sb.AppendLine("            return;");
+        sb.AppendLine("        }");
+        sb.AppendLine(
+            $"        StanzaConfig.Trace(\"[Lifecycle] Applying {view.Bindings.Length} bindings for {view.ClassName}...\", LogLevel.Debug);"
+        );
         sb.AppendLine();
 
         // The Dynamic Loop (AppendLines are great here)
@@ -74,6 +87,10 @@ public static class Emitter
 
             if (method != null)
             {
+                sb.AppendLine(
+                    $"        StanzaConfig.Trace(\"[Binding] Wiring {target} ({binding.BindingType}) -> ViewModel.{vmProp} (Mode: {binding.Mode})\", LogLevel.Debug);"
+                );
+
                 // Command is special (doesn't take the lambda/propertyName args)
                 if (binding.BindingType == "BindCommand")
                     sb.AppendLine(
@@ -88,12 +105,14 @@ public static class Emitter
 
         // Method End & Dispose
         sb.Append(
-            """
+            $$"""
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for {{view.ClassName}}.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing {{view.ClassName}} (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }

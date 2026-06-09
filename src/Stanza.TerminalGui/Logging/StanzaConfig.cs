@@ -1,12 +1,24 @@
+// File: src\Stanza.TerminalGui\Logging\ILogger.cs
 namespace Stanza.TerminalGui;
 
-/// <summary>
-/// Global configuration for Stanza.TerminalGui, including logging setup.
-/// </summary>
+public enum LogLevel
+{
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
 public static class StanzaConfig
 {
-    /// <summary>
-    /// Gets or sets the logger used by Stanza to trace binding activity.
-    /// </summary>
     public static ILogger? Logger { get; set; }
+
+    internal static void Trace(
+        string message,
+        LogLevel level = LogLevel.Debug,
+        [System.Runtime.CompilerServices.CallerFilePath] string? category = null
+    )
+    {
+        Logger?.Log(level, message, Path.GetFileNameWithoutExtension(category) ?? "Stanza");
+    }
 }

@@ -37,6 +37,7 @@ public static class Emitter
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to {{view.ClassName}}", LogLevel.Info); 
             ApplyBindings();
         }
     }

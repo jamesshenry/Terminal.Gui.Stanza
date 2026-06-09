@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Stanza.TerminalGui;
 using Stanza.TerminalGui.Demo;
 using Terminal.Gui;
 using Terminal.Gui.App;
+
+StanzaConfig.Logger = new StanzaDebugLogger();
 
 var app = Application.Create();
 
@@ -19,6 +21,15 @@ app.Init();
 // 3. Resolve the View (DI injects the ViewModel)
 var mainView = serviceProvider.GetRequiredService<ProfileView>();
 
-// 4. Run
-app.Run(mainView);
 app.Dispose();
+
+// In your Demo App Project
+public class StanzaDebugLogger : ILogger
+{
+    public void Log(LogLevel level, string message, string category)
+    {
+        System.Diagnostics.Debug.WriteLine($"[{level}][{category}] {message}");
+    }
+}
+
+// In Program.cs before App.Init()

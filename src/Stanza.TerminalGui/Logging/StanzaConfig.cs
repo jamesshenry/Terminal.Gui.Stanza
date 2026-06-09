@@ -1,4 +1,3 @@
-// File: src\Stanza.TerminalGui\Logging\ILogger.cs
 namespace Stanza.TerminalGui;
 
 public enum LogLevel

@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Terminal.Gui;
+using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -106,7 +108,7 @@ public static class BindingExtensions
         TViewModel viewModel,
         Func<TViewModel, TValue> vmGetter,
         Action<TValue> vmSetter,
-        Action<Action> subscribeUiChange,
+        Func<Action, IDisposable> subscribeUiChange,
         Func<TValue> uiGetter,
         Action<TValue> uiSetter,
         [CallerArgumentExpression(nameof(vmGetter))] string? expression = null
@@ -156,11 +158,12 @@ public static class BindingExtensions
             }
         });
 
-        subscribeUiChange(uiHandler);
+        var uiSub = subscribeUiChange(uiHandler);
 
         return new DisposableAction(() =>
         {
             vmToUi.Dispose();
+            uiSub.Dispose();
         });
     }
 
@@ -184,7 +187,12 @@ public static class BindingExtensions
                 viewModel,
                 getter,
                 val => setter(viewModel, val?.ToString() ?? string.Empty),
-                handler => view.TextChanged += (s, e) => handler(),
+                handler =>
+                {
+                    EventHandler internalHandler = (s, e) => handler();
+                    view.TextChanged += internalHandler;
+                    return new DisposableAction(() => view.TextChanged -= internalHandler);
+                },
                 () => view.Text?.ToString() ?? string.Empty,
                 val =>
                 {
@@ -235,7 +243,13 @@ public static class BindingExtensions
                 viewModel,
                 getter,
                 val => setter(viewModel, val),
-                handler => target.ValueChanged += (s, e) => handler(),
+                handler =>
+                {
+                    EventHandler<ValueChangedEventArgs<CheckState>> internalHandler = (s, e) =>
+                        handler();
+                    target.ValueChanged += internalHandler;
+                    return new DisposableAction(() => target.ValueChanged -= internalHandler);
+                },
                 () => target.Value == CheckState.Checked,
                 val => target.Value = val ? CheckState.Checked : CheckState.UnChecked,
                 propertyName
@@ -315,4 +329,3 @@ public static class BindingExtensions
 
     #endregion
 }
-

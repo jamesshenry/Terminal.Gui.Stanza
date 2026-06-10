@@ -56,7 +56,7 @@ internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
 """
         );
 
-        sb.AppendLine("public static class StanzaLoggingExtensions");
+        sb.AppendLine("internal static class StanzaLoggingExtensions");
         sb.AppendLine("{");
 
         sb.Append(

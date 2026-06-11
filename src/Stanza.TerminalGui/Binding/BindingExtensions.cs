@@ -167,6 +167,19 @@ public static class BindingExtensions
         });
     }
 
+    public static IDisposable BindEvent<TView, TArgs>(
+        this TView view,
+        Action<TView, EventHandler<TArgs>> subscribe,
+        Action<TView, EventHandler<TArgs>> unsubscribe,
+        Action<TArgs> action
+    )
+        where TArgs : EventArgs
+    {
+        EventHandler<TArgs> handler = (s, e) => action(e);
+        subscribe(view, handler);
+        return new DisposableAction(() => unsubscribe(view, handler));
+    }
+
     #region Generator Apply Methods
 
     /// <summary>

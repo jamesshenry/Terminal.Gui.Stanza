@@ -11,13 +11,16 @@ using Terminal.Gui.App;
 
 var builder = Host.CreateApplicationBuilder();
 builder.Configuration.Sources.Clear();
-builder.Services.AddLogging(builder =>
-{
-    builder.AddDebug(); // Writes to IDE debug output
-    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace); // Log all messages
-});
+
+// builder.Services.AddLogging(builder =>
+// {
+//     builder.AddDebug(); // Writes to IDE debug output
+//     builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace); // Log all messages
+// });
 builder.Services.AddTransient<ProfileViewModel>();
 builder.Services.AddTransient<ProfileView>();
+builder.Services.AddTransient<ResultsViewModel>();
+builder.Services.AddTransient<ResultsDialog>();
 builder.Services.AddSingleton<IApplication>(_ => Application.Create().Init());
 
 var host = builder.Build();
@@ -28,7 +31,10 @@ host.UseStanzaLogging();
 using var app = host.Services.GetRequiredService<IApplication>();
 
 // 4. Resolve the View (DI injects the ViewModel)
-var mainView = host.Services.GetRequiredService<ProfileView>();
+var mainView = host.Services.GetRequiredService<ResultsDialog>();
+var viewModel = host.Services.GetRequiredService<ResultsViewModel>();
+mainView.ViewModel = viewModel;
+viewModel.Initialize();
 
 app.Run(mainView);
 app.Dispose();

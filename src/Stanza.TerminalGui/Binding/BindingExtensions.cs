@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -167,17 +168,40 @@ public static class BindingExtensions
         });
     }
 
-    public static IDisposable BindEvent<TView, TArgs>(
-        this TView view,
-        Action<TView, EventHandler<TArgs>> subscribe,
-        Action<TView, EventHandler<TArgs>> unsubscribe,
-        Action<TArgs> action
+    public static IDisposable OnEvent<TArgs>(
+        this View view,
+        Action<EventHandler<TArgs>> subscribe,
+        Action<EventHandler<TArgs>> unsubscribe,
+        Action<TArgs> handler
     )
-        where TArgs : EventArgs
     {
-        EventHandler<TArgs> handler = (s, e) => action(e);
-        subscribe(view, handler);
-        return new DisposableAction(() => unsubscribe(view, handler));
+        EventHandler<TArgs> wrapper = (s, e) => handler(e);
+        subscribe(wrapper);
+        return new DisposableAction(() => unsubscribe(wrapper));
+    }
+
+    public static IDisposable OnCollectionChanged(
+        this INotifyCollectionChanged collection,
+        NotifyCollectionChangedEventHandler handler
+    )
+    {
+        collection.CollectionChanged += handler;
+        return new DisposableAction(() => collection.CollectionChanged -= handler);
+    }
+
+    public static IDisposable OnPropertyChanged(
+        this INotifyPropertyChanged viewModel,
+        string propertyName,
+        Action handler
+    )
+    {
+        PropertyChangedEventHandler wrapper = (s, e) =>
+        {
+            if (e.PropertyName == propertyName)
+                handler();
+        };
+        viewModel.PropertyChanged += wrapper;
+        return new DisposableAction(() => viewModel.PropertyChanged -= wrapper);
     }
 
     #region Generator Apply Methods

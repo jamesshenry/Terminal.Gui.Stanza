@@ -3,7 +3,6 @@
   - Stanza.TerminalGui.Generators.Tests
   - Stanza.TerminalGui.Tests
     - Binding
-    - Layout
     - Logging
 
 # --- Start of Code Files ---
@@ -110,9 +109,12 @@ public static class BindingContextExtensions
 // File: src\Stanza.TerminalGui\Binding\BindingExtensions.cs
 
 ```csharp
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Terminal.Gui;
+using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -158,6 +160,7 @@ public static class BindingExtensions
             if (string.Equals(e.PropertyName, propertyName, StringComparison.Ordinal))
             {
                 var newValue = propertyExpression(viewModel);
+                StanzaConfig.Trace($"[Binding] VM -> UI: {propertyName} = {newValue}");
 
                 if (view.App != null)
                     view.App.Invoke(() => updateUi(newValue));
@@ -217,7 +220,7 @@ public static class BindingExtensions
         TViewModel viewModel,
         Func<TViewModel, TValue> vmGetter,
         Action<TValue> vmSetter,
-        Action<Action> subscribeUiChange,
+        Func<Action, IDisposable> subscribeUiChange,
         Func<TValue> uiGetter,
         Action<TValue> uiSetter,
         [CallerArgumentExpression(nameof(vmGetter))] string? expression = null
@@ -267,12 +270,49 @@ public static class BindingExtensions
             }
         });
 
-        subscribeUiChange(uiHandler);
+        var uiSub = subscribeUiChange(uiHandler);
 
         return new DisposableAction(() =>
         {
             vmToUi.Dispose();
+            uiSub.Dispose();
         });
+    }
+
+    public static IDisposable OnEvent<TArgs>(
+        this View view,
+        Action<EventHandler<TArgs>> subscribe,
+        Action<EventHandler<TArgs>> unsubscribe,
+        Action<TArgs> handler
+    )
+    {
+        EventHandler<TArgs> wrapper = (s, e) => handler(e);
+        subscribe(wrapper);
+        return new DisposableAction(() => unsubscribe(wrapper));
+    }
+
+    public static IDisposable OnCollectionChanged(
+        this INotifyCollectionChanged collection,
+        NotifyCollectionChangedEventHandler handler
+    )
+    {
+        collection.CollectionChanged += handler;
+        return new DisposableAction(() => collection.CollectionChanged -= handler);
+    }
+
+    public static IDisposable OnPropertyChanged(
+        this INotifyPropertyChanged viewModel,
+        string propertyName,
+        Action handler
+    )
+    {
+        PropertyChangedEventHandler wrapper = (s, e) =>
+        {
+            if (e.PropertyName == propertyName)
+                handler();
+        };
+        viewModel.PropertyChanged += wrapper;
+        return new DisposableAction(() => viewModel.PropertyChanged -= wrapper);
     }
 
     #region Generator Apply Methods
@@ -292,38 +332,43 @@ public static class BindingExtensions
         if (setter != null)
         {
             return view.BindTwoWay(
-            viewModel,
-            getter,
-            val => setter(viewModel, val?.ToString() ?? string.Empty),
-            handler => view.TextChanged += (s, e) => handler(),
-            () => view.Text?.ToString() ?? string.Empty,
-            val =>
-            {
-                var newText = val?.ToString() ?? string.Empty;
-                // CRITICAL FIX: Only set if the text is actually different.
-                // This prevents the cursor-reset loop.
-                if (view.Text != newText)
+                viewModel,
+                getter,
+                val => setter(viewModel, val?.ToString() ?? string.Empty),
+                handler =>
                 {
-                    view.Text = newText;
-                }
-            },
-            propertyName
+                    EventHandler internalHandler = (s, e) => handler();
+                    view.TextChanged += internalHandler;
+                    return new DisposableAction(() => view.TextChanged -= internalHandler);
+                },
+                () => view.Text?.ToString() ?? string.Empty,
+                val =>
+                {
+                    var newText = val?.ToString() ?? string.Empty;
+                    // CRITICAL FIX: Only set if the text is actually different.
+                    // This prevents the cursor-reset loop.
+                    if (view.Text != newText)
+                    {
+                        view.Text = newText;
+                    }
+                },
+                propertyName
             );
         }
         else
         {
             return view.Bind(
-            viewModel,
-            getter,
-            val =>
-            {
-                var newText = val?.ToString() ?? string.Empty;
-                if (view.Text != newText)
+                viewModel,
+                getter,
+                val =>
                 {
-                    view.Text = newText;
-                }
-            },
-            propertyName
+                    var newText = val?.ToString() ?? string.Empty;
+                    if (view.Text != newText)
+                    {
+                        view.Text = newText;
+                    }
+                },
+                propertyName
             );
         }
     }
@@ -346,7 +391,13 @@ public static class BindingExtensions
                 viewModel,
                 getter,
                 val => setter(viewModel, val),
-                handler => target.ValueChanged += (s, e) => handler(),
+                handler =>
+                {
+                    EventHandler<ValueChangedEventArgs<CheckState>> internalHandler = (s, e) =>
+                        handler();
+                    target.ValueChanged += internalHandler;
+                    return new DisposableAction(() => target.ValueChanged -= internalHandler);
+                },
                 () => target.Value == CheckState.Checked,
                 val => target.Value = val ? CheckState.Checked : CheckState.UnChecked,
                 propertyName
@@ -498,44 +549,6 @@ public interface IStanzaView<TViewModel> : IDisposable
 
 ```
 
-// File: src\Stanza.TerminalGui\Layout\ScreenSize.cs
-
-```csharp
-using System.Diagnostics;
-using Terminal.Gui.App;
-using Terminal.Gui.ViewBase;
-
-namespace Stanza.TerminalGui.Layout;
-
-public enum ScreenSize
-{
-    S,
-    M,
-    L,
-    XL,
-}
-
-public record Breakpoint(int Columns, int Rows);
-
-public class ScreenConfiguration
-{
-    private readonly View _container;
-
-    public ScreenConfiguration(View container) => _container = container;
-
-    public ScreenSize CurrentSize => _container.Viewport.Width switch
-    {
-        < 60 => ScreenSize.S,
-        < 100 => ScreenSize.M,
-        < 140 => ScreenSize.L,
-        _ => ScreenSize.XL,
-    };
-
-    // Helper for "Mobile-first" logic
-    public bool AtLeast(ScreenSize size) => CurrentSize >= size;
-}
-```
-
 // File: src\Stanza.TerminalGui\Logging\ILogger.cs
 
 ```csharp
@@ -550,7 +563,10 @@ public interface ILogger
     /// Log the received message.
     /// </summary>
     /// <param name="message"></param>
-    void Log(string message);
+    void Log(LogLevel level, string message, string category);
+
+    // Explicitly forces exceptions to be handled as Errors
+    void LogError(Exception exception, string message, string category);
 }
 
 ```
@@ -560,15 +576,39 @@ public interface ILogger
 ```csharp
 namespace Stanza.TerminalGui;
 
-/// <summary>
-/// Global configuration for Stanza.TerminalGui, including logging setup.
-/// </summary>
+public enum LogLevel
+{
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
 public static class StanzaConfig
 {
-    /// <summary>
-    /// Gets or sets the logger used by Stanza to trace binding activity.
-    /// </summary>
     public static ILogger? Logger { get; set; }
+
+    public static void Trace(
+        string message,
+        LogLevel level = LogLevel.Debug,
+        [System.Runtime.CompilerServices.CallerFilePath] string? category = null
+    )
+    {
+        Logger?.Log(level, message, Path.GetFileNameWithoutExtension(category) ?? "Stanza");
+    }
+
+    public static void Error(
+        Exception exception,
+        string message,
+        [System.Runtime.CompilerServices.CallerFilePath] string? category = null
+    )
+    {
+        Logger?.LogError(
+            exception,
+            message,
+            Path.GetFileNameWithoutExtension(category) ?? "Stanza"
+        );
+    }
 }
 
 ```
@@ -712,6 +752,16 @@ public sealed class BindCommandAttribute : StanzaBindingAttribute
         : base(viewModelPropertyName) { }
 }
 
+public sealed class BindListAttribute : StanzaBindingAttribute
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BindListAttribute"/> class.
+    /// </summary>
+    /// <param name="viewModelPropertyName">The name of the <c>ICommand</c> property on the ViewModel.</param>
+    public BindListAttribute(string viewModelPropertyName)
+        : base(viewModelPropertyName) { }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui\BindingMode.cs
@@ -766,14 +816,16 @@ Rule ID | Category | Severity | Notes
 STN010 | Usage    | Error    | Class must be partial.
 STN011 | Usage    | Error    | Must inherit from Terminal.Gui.View.
 STN012 | Usage    | Error    | Member name collision with generated plumbing.
-STN020 | Stanza.Binding  | Warning    | Property name not found on ViewModel.
-STN021 | Stanza.Binding  | Error    | Property found but not accessible.
-STN022 | Stanza.Binding  | Error    | BindCommand target is not ICommand.
-STN004 | Stanza.Binding  | Error    | Read-only property cannot have explicit TwoWay binding.
-STN005 | Stanza.Binding  | Info     | Read-only property auto-degraded to OneWay.
-STN030 | Stanza.Binding  | Error    | ViewModel type is incompatible with Binding type (e.g. string vs bool).
-STN031 | Stanza.Binding  | Error    | Control type does not support this specific binding.
-STN032 | Stanza.Binding  | Warning  | Multiple bindings targeting the same UI property.
+STN020 | Stanza.Binding | Warning    | Property name not found on ViewModel.
+STN021 | Stanza.Binding | Error    | Property found but not accessible.
+STN022 | Stanza.Binding | Error    | BindCommand target is not ICommand.
+STN004 | Stanza.Binding | Error    | Read-only property cannot have explicit TwoWay binding.
+STN005 | Stanza.Binding | Info     | Read-only property auto-degraded to OneWay.
+STN030 | Stanza.Binding | Error    | ViewModel type is incompatible with Binding type (e.g. string vs bool).
+STN031 | Stanza.Binding | Error    | Control type does not support this specific binding.
+STN032 | Stanza.Binding | Warning  | Multiple bindings targeting the same UI property.
+STN040 | Stanza.Binding | Error | StanzaDiagnostics
+STN041 | Stanza.Binding | Warning | StanzaDiagnostics
 
 ```
 
@@ -818,7 +870,9 @@ public static class Emitter
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on {{view.ClassName}}", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to {{view.ClassName}}", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -831,9 +885,21 @@ public static class Emitter
         // Binding Method Start
         sb.AppendLine("    private void ApplyBindings()");
         sb.AppendLine("    {");
+        sb.AppendLine(
+            $"        StanzaConfig.Trace(\"[Lifecycle] Disposing old bindings for {view.ClassName}\", LogLevel.Debug);"
+        );
         sb.AppendLine("        _bindingContext.Dispose();");
         sb.AppendLine("        _bindingContext = new BindingContext();");
-        sb.AppendLine("        if (_viewModel == null) return;");
+        sb.AppendLine("        if (_viewModel == null)");
+        sb.AppendLine("        {");
+        sb.AppendLine(
+            $"            StanzaConfig.Trace(\"[Lifecycle] ViewModel is null for {view.ClassName}, skipping bindings.\", LogLevel.Debug);"
+        );
+        sb.AppendLine("            return;");
+        sb.AppendLine("        }");
+        sb.AppendLine(
+            $"        StanzaConfig.Trace(\"[Lifecycle] Applying {view.Bindings.Length} bindings for {view.ClassName}...\", LogLevel.Debug);"
+        );
         sb.AppendLine();
 
         // The Dynamic Loop (AppendLines are great here)
@@ -855,6 +921,10 @@ public static class Emitter
 
             if (method != null)
             {
+                sb.AppendLine(
+                    $"        StanzaConfig.Trace(\"[Binding] Wiring {target} ({binding.BindingType}) -> ViewModel.{vmProp} (Mode: {binding.Mode})\", LogLevel.Debug);"
+                );
+
                 // Command is special (doesn't take the lambda/propertyName args)
                 if (binding.BindingType == "BindCommand")
                     sb.AppendLine(
@@ -869,12 +939,14 @@ public static class Emitter
 
         // Method End & Dispose
         sb.Append(
-            """
+            $$"""
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for {{view.ClassName}}.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing {{view.ClassName}} (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
@@ -971,6 +1043,119 @@ public static class ITypeSymbolExtensions
 
 ```
 
+// File: src\Stanza.TerminalGui.Generators\LoggingExtensionsEmitter.cs
+
+```csharp
+using System.Text;
+
+namespace Stanza.TerminalGui.Generators;
+
+internal static class LoggingExtensionsEmitter
+{
+    /// <summary>
+    /// Emits the MelLoggerAdapter and UseStanzaLogging extension methods when
+    /// Microsoft.Extensions.Logging types are present in the compilation.
+    /// </summary>
+    /// <param name="hasHost">Whether Microsoft.Extensions.Hosting.IHost is also available.</param>
+    public static string Emit(bool hasHost)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("// <auto-generated/>");
+        sb.AppendLine("#nullable enable");
+        sb.AppendLine();
+        sb.AppendLine("namespace Stanza.TerminalGui;");
+        sb.AppendLine();
+
+        // Internal MEL adapter — stays private to the consumer's compilation
+        sb.Append(
+            """
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+
+"""
+        );
+
+        sb.AppendLine("internal static class StanzaLoggingExtensions");
+        sb.AppendLine("{");
+
+        sb.Append(
+            """
+                /// <summary>
+                /// Wires Stanza's internal logging into the application's MEL pipeline.
+                /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+                /// </summary>
+                public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+                {
+                    StanzaConfig.Logger = new MelLoggerAdapter(
+                        (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+                    );
+                    return provider;
+                }
+
+            """
+        );
+
+        if (hasHost)
+        {
+            sb.Append(
+                """
+                    /// <summary>
+                    /// Wires Stanza's internal logging into the application's MEL pipeline.
+                    /// </summary>
+                    /// <example>
+                    /// <code>
+                    /// var host = builder.Build();
+                    /// host.UseStanzaLogging();
+                    /// await host.RunAsync();
+                    /// </code>
+                    /// </example>
+                    public static Microsoft.Extensions.Hosting.IHost UseStanzaLogging(this Microsoft.Extensions.Hosting.IHost host)
+                    {
+                        host.Services.UseStanzaLogging();
+                        return host;
+                    }
+
+                """
+            );
+        }
+
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+}
+
+```
+
 // File: src\Stanza.TerminalGui.Generators\StanzaBindingGenerator.cs
 
 ```csharp
@@ -1007,6 +1192,35 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                     var source = Emitter.Emit(result.ViewIr);
                     spc.AddSource($"{result.ViewIr.ClassName}.g.cs", source);
                 }
+            }
+        );
+
+        var loggingProvider = context.CompilationProvider.Select(
+            (compilation, _) =>
+            {
+                // Don't emit into the core library itself — only into consuming projects.
+                if (compilation.AssemblyName == "Stanza.TerminalGui")
+                    return (hasLogging: false, hasHost: false);
+
+                var hasLogging =
+                    compilation.GetTypeByMetadataName("Microsoft.Extensions.Logging.ILoggerFactory")
+                    != null;
+                var hasHost =
+                    compilation.GetTypeByMetadataName("Microsoft.Extensions.Hosting.IHost") != null;
+                return (hasLogging, hasHost);
+            }
+        );
+
+        context.RegisterSourceOutput(
+            loggingProvider,
+            (spc, flags) =>
+            {
+                if (!flags.hasLogging)
+                    return;
+                spc.AddSource(
+                    "StanzaLoggingExtensions.g.cs",
+                    LoggingExtensionsEmitter.Emit(flags.hasHost)
+                );
             }
         );
     }
@@ -1095,6 +1309,73 @@ public class StanzaBindingGenerator : IIncrementalGenerator
         if (vmTypeSymbol == null)
             return new ViewParseResult(null, diagnostics.ToImmutable());
 
+        // 4. STN040: ViewModel must implement INotifyPropertyChanged
+        bool implementsInpc = vmTypeSymbol.AllInterfaces.Any(i =>
+            i.ToDisplayString() == "System.ComponentModel.INotifyPropertyChanged"
+        );
+        if (!implementsInpc)
+        {
+            diagnostics.Add(
+                Diagnostic.Create(
+                    StanzaDiagnostics.ViewModelMustImplementINPC,
+                    attribute.ApplicationSyntaxReference?.GetSyntax(token).GetLocation()
+                        ?? classDeclaration.Identifier.GetLocation(),
+                    vmTypeSymbol.Name
+                )
+            );
+        }
+
+        // 5. STN041: Unmanaged Event Subscriptions
+        var methodSmells = classDeclaration
+            .DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .Where(m =>
+                m.Identifier.Text == "OnApplyBindings"
+                || m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword))
+            );
+        var ctorSmells = classDeclaration.DescendantNodes().OfType<ConstructorDeclarationSyntax>();
+
+        foreach (var method in methodSmells.Cast<MemberDeclarationSyntax>().Concat(ctorSmells))
+        {
+            var addAssignments = method
+                .DescendantNodes()
+                .OfType<AssignmentExpressionSyntax>()
+                .Where(a => a.IsKind(SyntaxKind.AddAssignmentExpression));
+
+            foreach (var assignment in addAssignments)
+            {
+                // We're looking for += that isn't wrapped in AddBinding or followed by .AddTo
+                // This is a naive heuristic but good for a "smell" diagnostic
+                var parent = assignment.Parent;
+                bool isManaged = false;
+
+                // Check up the tree for AddBinding or AddTo
+                while (parent != null && parent != method)
+                {
+                    var parentText = parent.ToString();
+                    if (parentText.Contains("AddBinding") || parentText.Contains("AddTo"))
+                    {
+                        isManaged = true;
+                        break;
+                    }
+                    parent = parent.Parent;
+                }
+
+                if (!isManaged)
+                {
+                    diagnostics.Add(
+                        Diagnostic.Create(
+                            StanzaDiagnostics.UnmanagedEventSubscription,
+                            assignment.GetLocation(),
+                            method is MethodDeclarationSyntax mds
+                                ? mds.Identifier.Text
+                                : "constructor"
+                        )
+                    );
+                }
+            }
+        }
+
         var vmType = vmTypeSymbol.ToDisplayString();
         var bindings = ImmutableArray.CreateBuilder<BindingIR>();
         var members = classSymbol
@@ -1165,6 +1446,43 @@ public class StanzaBindingGenerator : IIncrementalGenerator
                     // We'll add it to the IR because the emitted code will use the string name anyway.
                     // If the property TRULY doesn't exist, the final C# compilation of the .g.cs will fail.
                     bindings.Add(new BindingIR(member.Name, bindingType, vmPropName!, "OneWay"));
+                    continue;
+                }
+
+                // STN031: Invalid control target
+                ITypeSymbol memberType = member is IPropertySymbol ps
+                    ? ps.Type
+                    : ((IFieldSymbol)member).Type;
+                if (
+                    bindingType == "BindChecked"
+                    && !memberType.IsSubtypeOf("Terminal.Gui.Views.CheckBox")
+                    && memberType.Name != "CheckBox"
+                )
+                {
+                    diagnostics.Add(
+                        Diagnostic.Create(
+                            StanzaDiagnostics.InvalidControlTarget,
+                            attrLocation,
+                            bindingType,
+                            member.Name
+                        )
+                    );
+                    continue;
+                }
+                if (
+                    bindingType == "BindCommand"
+                    && !memberType.IsSubtypeOf("Terminal.Gui.Views.Button")
+                    && memberType.Name != "Button"
+                )
+                {
+                    diagnostics.Add(
+                        Diagnostic.Create(
+                            StanzaDiagnostics.InvalidControlTarget,
+                            attrLocation,
+                            bindingType,
+                            member.Name
+                        )
+                    );
                     continue;
                 }
 
@@ -1396,6 +1714,26 @@ public static class StanzaDiagnostics
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
+
+    // --- Smells & Safety (STN04x) ---
+
+    public static readonly DiagnosticDescriptor ViewModelMustImplementINPC = new(
+        id: "STN040",
+        title: "ViewModel must implement INotifyPropertyChanged",
+        messageFormat: "The ViewModel type '{0}' must implement INotifyPropertyChanged for bindings to work correctly",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor UnmanagedEventSubscription = new(
+        id: "STN041",
+        title: "Unmanaged event subscription",
+        messageFormat: "Manual event subscription detected in '{0}'. This will leak when the ViewModel is swapped or the View is disposed. Route subscriptions through 'BindingContext' or use '.AddTo(context)'.",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
 }
 
 ```
@@ -1574,6 +1912,126 @@ public class DiagnosticTests
         var diags = TestHelper.VerifyDiagnostics(source);
 
         await Assert.That(diags).Contains(d => d.Id == "STN012");
+    }
+
+    [Test]
+    public async Task STN040_Error_WhenViewModelDoesNotImplementINPC()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class NotInpcVm { 
+                public string Name { get; set; } = "";
+            }
+
+            [StanzaView<NotInpcVm>]
+            public partial class MyView : View { }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+
+        await Assert.That(diags).Contains(d => d.Id == "STN040");
+    }
+
+    [Test]
+    public async Task STN041_Warning_OnUnmanagedEventSubscriptionInCtor()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class MyVm : System.ComponentModel.INotifyPropertyChanged { 
+                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+            }
+
+            [StanzaView<MyVm>]
+            public partial class MyView : View {
+                public Button MyButton { get; set; } = new();
+                public MyView() {
+                    MyButton.Accepting += (s, e) => { }; // Smell!
+                }
+            }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+
+        await Assert.That(diags).Contains(d => d.Id == "STN041");
+    }
+
+    [Test]
+    public async Task STN041_Warning_OnUnmanagedSubscriptionInApplyBindings()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class MyVm : System.ComponentModel.INotifyPropertyChanged { 
+                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+            }
+
+            [StanzaView<MyVm>]
+            public partial class MyView : View {
+                public Button MyButton { get; set; } = new();
+                partial void OnApplyBindings(BindingContext context) {
+                    MyButton.Accepting += (s, e) => { }; // Smell!
+                }
+            }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+
+        await Assert.That(diags).Contains(d => d.Id == "STN041");
+    }
+
+    [Test]
+    public async Task STN041_NoError_WhenSubscriptionIsManaged()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class MyVm : System.ComponentModel.INotifyPropertyChanged { 
+                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+            }
+
+            [StanzaView<MyVm>]
+            public partial class MyView : View {
+                public Button MyButton { get; set; } = new();
+                partial void OnApplyBindings(BindingContext context) {
+                    // This is fine
+                    new System.Action(() => { }).AddTo(context);
+                }
+            }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+
+        await Assert.That(diags.Any(d => d.Id == "STN041")).IsFalse();
+    }
+
+    [Test]
+    public async Task STN031_Error_WhenBindCheckedOnNonCheckBox()
+    {
+        var source = """
+            using Stanza.TerminalGui;
+            using Terminal.Gui.Views;
+
+            public class MyVm : System.ComponentModel.INotifyPropertyChanged { 
+                public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+                public bool IsActive { get; set; }
+            }
+
+            [StanzaView<MyVm>]
+            public partial class MyView : View {
+                [BindChecked(nameof(MyVm.IsActive))]
+                public Button MyButton { get; set; } = new(); // Invalid target for BindChecked
+            }
+            """;
+
+        var diags = TestHelper.VerifyDiagnostics(source);
+
+        await Assert.That(diags).Contains(d => d.Id == "STN031");
     }
 }
 
@@ -1841,7 +2299,9 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on MyView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to MyView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -1849,20 +2309,85 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for MyView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for MyView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 1 bindings for MyView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Binding] Wiring MyCheckBox (BindChecked) -> ViewModel.IsChecked (Mode: TwoWay)", LogLevel.Debug);
         _bindingContext.AddBinding(MyCheckBox.ApplyBindChecked(_viewModel, "IsChecked", x => x.IsChecked, (x, val) => x.IsChecked = val));
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for MyView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing MyView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindChecked_TwoWay#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindCommand#MyView.g.verified.cs
@@ -1887,7 +2412,9 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on MyView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to MyView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -1895,20 +2422,85 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for MyView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for MyView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 1 bindings for MyView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Binding] Wiring SaveButton (BindCommand) -> ViewModel.SaveCommand (Mode: OneWay)", LogLevel.Debug);
         _bindingContext.AddBinding(SaveButton.ApplyBindCommand(_viewModel.SaveCommand));
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for MyView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing MyView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindCommand#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindEnabled_OneWay#MyView.g.verified.cs
@@ -1933,7 +2525,9 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on MyView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to MyView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -1941,20 +2535,85 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for MyView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for MyView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 1 bindings for MyView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Binding] Wiring MyTextField (BindEnabled) -> ViewModel.CanEdit (Mode: OneWay)", LogLevel.Debug);
         _bindingContext.AddBinding(MyTextField.ApplyBindEnabled(_viewModel, "CanEdit", x => x.CanEdit));
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for MyView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing MyView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindEnabled_OneWay#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindText_TwoWay#MyView.g.verified.cs
@@ -1979,7 +2638,9 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on MyView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to MyView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -1987,20 +2648,85 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for MyView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for MyView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 1 bindings for MyView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Binding] Wiring MyLabel (BindText) -> ViewModel.Name (Mode: TwoWay)", LogLevel.Debug);
         _bindingContext.AddBinding(MyLabel.ApplyBindText(_viewModel, "Name", x => x.Name, (x, val) => x.Name = val));
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for MyView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing MyView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindText_TwoWay#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindVisible_OneWay#MyView.g.verified.cs
@@ -2025,7 +2751,9 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on MyView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to MyView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -2033,20 +2761,85 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for MyView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for MyView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 1 bindings for MyView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Binding] Wiring MyLabel (BindVisible) -> ViewModel.ShowElement (Mode: OneWay)", LogLevel.Debug);
         _bindingContext.AddBinding(MyLabel.ApplyBindVisible(_viewModel, "ShowElement", x => x.ShowElement));
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for MyView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing MyView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_BindVisible_OneWay#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_GlobalNamespace#GlobalView.g.verified.cs
@@ -2070,7 +2863,9 @@ partial class GlobalView : IStanzaView<GlobalViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on GlobalView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to GlobalView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -2078,20 +2873,85 @@ partial class GlobalView : IStanzaView<GlobalViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for GlobalView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for GlobalView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 1 bindings for GlobalView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Binding] Wiring StatusLabel (BindText) -> ViewModel.Status (Mode: TwoWay)", LogLevel.Debug);
         _bindingContext.AddBinding(StatusLabel.ApplyBindText(_viewModel, "Status", x => x.Status, (x, val) => x.Status = val));
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for GlobalView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing GlobalView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_GlobalNamespace#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_WithNoBindings#MyView.g.verified.cs
@@ -2116,7 +2976,9 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
         set
         {
             if (object.ReferenceEquals(_viewModel, value)) return;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel changed on MyView", LogLevel.Debug);
             _viewModel = value;
+            StanzaConfig.Trace($"[Lifecycle] ViewModel attached to MyView", LogLevel.Info); 
             ApplyBindings();
         }
     }
@@ -2124,19 +2986,83 @@ partial class MyView : IStanzaView<TestNamespace.MyViewModel>
     partial void OnApplyBindings(BindingContext context);
     private void ApplyBindings()
     {
+        StanzaConfig.Trace("[Lifecycle] Disposing old bindings for MyView", LogLevel.Debug);
         _bindingContext.Dispose();
         _bindingContext = new BindingContext();
-        if (_viewModel == null) return;
+        if (_viewModel == null)
+        {
+            StanzaConfig.Trace("[Lifecycle] ViewModel is null for MyView, skipping bindings.", LogLevel.Debug);
+            return;
+        }
+        StanzaConfig.Trace("[Lifecycle] Applying 0 bindings for MyView...", LogLevel.Debug);
 
+        StanzaConfig.Trace("[Lifecycle] Bindings applied successfully for MyView.", LogLevel.Debug);
         OnApplyBindings(_bindingContext);
     }
 
     protected override void Dispose(bool disposing)
     {
+        StanzaConfig.Trace($"[Lifecycle] Disposing MyView (disposing: {disposing})", LogLevel.Debug);
         if (disposing) _bindingContext.Dispose();
         base.Dispose(disposing);
     }
 }
+```
+
+// File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly_WithNoBindings#StanzaLoggingExtensions.g.verified.cs
+
+```csharp
+//HintName: StanzaLoggingExtensions.g.cs
+// <auto-generated/>
+#nullable enable
+
+namespace Stanza.TerminalGui;
+
+internal sealed class MelLoggerAdapter : global::Stanza.TerminalGui.ILogger
+{
+    private readonly global::Microsoft.Extensions.Logging.ILoggerFactory _factory;
+
+    internal MelLoggerAdapter(global::Microsoft.Extensions.Logging.ILoggerFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public void Log(global::Stanza.TerminalGui.LogLevel level, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        var melLevel = level switch
+        {
+            global::Stanza.TerminalGui.LogLevel.Debug => global::Microsoft.Extensions.Logging.LogLevel.Debug,
+            global::Stanza.TerminalGui.LogLevel.Info => global::Microsoft.Extensions.Logging.LogLevel.Information,
+            global::Stanza.TerminalGui.LogLevel.Warn => global::Microsoft.Extensions.Logging.LogLevel.Warning,
+            global::Stanza.TerminalGui.LogLevel.Error => global::Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => global::Microsoft.Extensions.Logging.LogLevel.Information
+        };
+        
+        global::Microsoft.Extensions.Logging.LoggerExtensions.Log(logger, melLevel, message);
+    }
+
+    public void LogError(global::System.Exception exception, string message, string category)
+    {
+        var logger = _factory.CreateLogger(category);
+        global::Microsoft.Extensions.Logging.LoggerExtensions.LogError(logger, exception, message);
+    }
+}
+public static class StanzaLoggingExtensions
+{
+    /// <summary>
+    /// Wires Stanza's internal logging into the application's MEL pipeline.
+    /// Call this after the service provider is built so that <see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> is available.
+    /// </summary>
+    public static System.IServiceProvider UseStanzaLogging(this System.IServiceProvider provider)
+    {
+        StanzaConfig.Logger = new MelLoggerAdapter(
+            (Microsoft.Extensions.Logging.ILoggerFactory)provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))!
+        );
+        return provider;
+    }
+}
+
 ```
 
 // File: src\Stanza.TerminalGui.Generators.Tests\GeneratorSnapshotTests.GeneratesCorrectly#MyView.g.verified.cs
@@ -2565,7 +3491,7 @@ public class EmitterScenarioTests
 
 ```
 
-// File: src\Stanza.TerminalGui.Tests\BindingTests.cs
+// File: src\Stanza.TerminalGui.Tests\BindingExtensionsTests.cs
 
 ```csharp
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -2576,7 +3502,7 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.Tests;
 
-public partial class BindingTests
+public partial class BindingExtensionsTests
 {
     private partial class FakeViewModel : ObservableObject
     {
@@ -2586,7 +3512,17 @@ public partial class BindingTests
         [ObservableProperty]
         public partial int Score { get; set; }
 
-        [RelayCommand]
+        [ObservableProperty]
+        public partial bool IsVisible { get; set; } = true;
+
+        [ObservableProperty]
+        public partial bool IsEnabled { get; set; } = true;
+
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+        public partial bool CanSave { get; set; } = true;
+
+        [RelayCommand(CanExecute = nameof(CanSave))]
         private void Save() => SaveCalledCount++;
 
         public int SaveCalledCount { get; set; }
@@ -2753,6 +3689,327 @@ public partial class BindingTests
     }
 
     [Test]
+    public async Task BindTwoWay_Dispose_UnsubscribesUiHandler()
+    {
+        // Arrange
+        var vm = new FakeViewModel { Name = "Initial" };
+        var textField = new TextField { Text = "Initial" };
+        var uiSubscribed = false;
+        var uiUnsubscribed = false;
+
+        var binding = textField.BindTwoWay(
+            vm,
+            v => v.Name,
+            val => vm.Name = val,
+            handler =>
+            {
+                uiSubscribed = true;
+                textField.TextChanged += (s, e) => handler();
+                return new DisposableAction(() => uiUnsubscribed = true);
+            },
+            () => textField.Text.ToString(),
+            val => textField.Text = val
+        );
+
+        // Act
+        binding.Dispose();
+
+        // Assert
+        await Assert.That(uiSubscribed).IsTrue();
+        await Assert.That(uiUnsubscribed).IsTrue();
+    }
+
+    // --- Phase A: Command Lifecycle ---
+
+    [Test]
+    public async Task BindCommand_SyncsCanExecuteToEnabled()
+    {
+        var vm = new FakeViewModel { CanSave = false };
+        var button = new Button();
+        using var binding = button.BindCommand(vm.SaveCommand);
+
+        await Assert.That(button.Enabled).IsFalse();
+
+        vm.CanSave = true;
+        await Assert.That(button.Enabled).IsTrue();
+    }
+
+    [Test]
+    public async Task BindCommand_Dispose_StopsExecutionAndEnabledSync()
+    {
+        var vm = new FakeViewModel { CanSave = true };
+        var button = new Button();
+        var binding = button.BindCommand(vm.SaveCommand);
+
+        binding.Dispose();
+
+        vm.CanSave = false;
+        await Assert.That(button.Enabled).IsTrue();
+
+        button.InvokeCommand(Command.Accept);
+        await Assert.That(vm.SaveCalledCount).IsEqualTo(0);
+    }
+
+    // --- Phase B: BindTwoWay Data Flow ---
+
+    [Test]
+    public async Task BindTwoWay_VmToUi_UpdatesUiSetter()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var dispatcher = new View();
+        var uiValue = "";
+
+        using var binding = dispatcher.BindTwoWay(
+            vm,
+            x => x.Name,
+            v => vm.Name = v,
+            handler => new DisposableAction(() => { }),
+            () => uiValue,
+            v => uiValue = v
+        );
+
+        vm.Name = "NewVm";
+        await Assert.That(uiValue).IsEqualTo("NewVm");
+    }
+
+    [Test]
+    public async Task BindTwoWay_UiToVm_UpdatesVmSetter()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var dispatcher = new View();
+        var uiValue = "Init";
+        Action? triggerUi = null;
+
+        using var binding = dispatcher.BindTwoWay(
+            vm,
+            x => x.Name,
+            v => vm.Name = v,
+            handler =>
+            {
+                triggerUi = handler;
+                return new DisposableAction(() => { });
+            },
+            () => uiValue,
+            v => uiValue = v
+        );
+
+        uiValue = "NewUi";
+        triggerUi?.Invoke();
+
+        await Assert.That(vm.Name).IsEqualTo("NewUi");
+    }
+
+    [Test]
+    public async Task BindTwoWay_ReentrancyGuard_PreventsCycle()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var dispatcher = new View();
+        var uiValue = "Init";
+        Action? triggerUi = null;
+        var uiSetterCalls = 0;
+
+        using var binding = dispatcher.BindTwoWay(
+            vm,
+            x => x.Name,
+            v => vm.Name = v,
+            handler =>
+            {
+                triggerUi = handler;
+                return new DisposableAction(() => { });
+            },
+            () => uiValue,
+            v =>
+            {
+                uiValue = v;
+                uiSetterCalls++;
+                triggerUi?.Invoke();
+            }
+        );
+
+        // Reset count after initial sync
+        uiSetterCalls = 0;
+        vm.Name = "VmChange";
+
+        await Assert.That(uiSetterCalls).IsEqualTo(1);
+        await Assert.That(vm.Name).IsEqualTo("VmChange");
+    }
+
+    [Test]
+    public async Task BindTwoWay_EqualValue_SkipsVmSetter()
+    {
+        var vm = new FakeViewModel { Score = 10 };
+        var dispatcher = new View();
+        var uiValue = 10;
+        Action? triggerUi = null;
+
+        var setterCalled = false;
+        using var binding = dispatcher.BindTwoWay(
+            vm,
+            x => x.Score,
+            v =>
+            {
+                vm.Score = v;
+                setterCalled = true;
+            },
+            handler =>
+            {
+                triggerUi = handler;
+                return new DisposableAction(() => { });
+            },
+            () => uiValue,
+            v => uiValue = v
+        );
+
+        triggerUi?.Invoke();
+        await Assert.That(setterCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task BindTwoWay_Dispose_StopsVmToUiDirection()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var dispatcher = new View();
+        var uiValue = "";
+
+        var binding = dispatcher.BindTwoWay(
+            vm,
+            x => x.Name,
+            v => vm.Name = v,
+            handler => new DisposableAction(() => { }),
+            () => uiValue,
+            v => uiValue = v
+        );
+
+        binding.Dispose();
+        vm.Name = "NewVm";
+
+        await Assert.That(uiValue).IsEqualTo("Init");
+    }
+
+    // --- Phase C: Apply* methods ---
+
+    [Test]
+    public async Task ApplyBindText_OneWay_UpdatesViewText()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var view = new View();
+        using var binding = view.ApplyBindText(vm, "Name", x => x.Name);
+
+        vm.Name = "NewName";
+        await Assert.That(view.Text?.ToString()).IsEqualTo("NewName");
+    }
+
+    [Test]
+    public async Task ApplyBindText_TwoWay_VmToUi()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var view = new View();
+        using var binding = view.ApplyBindText(vm, "Name", x => x.Name, (x, v) => x.Name = v);
+
+        vm.Name = "NewName";
+        await Assert.That(view.Text?.ToString()).IsEqualTo("NewName");
+    }
+
+    [Test]
+    public async Task ApplyBindText_TwoWay_UiToVm()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var view = new View { Text = "Init" };
+        using var binding = view.ApplyBindText(vm, "Name", x => x.Name, (x, v) => x.Name = v);
+
+        view.Text = "UiName";
+        await Assert.That(vm.Name).IsEqualTo("UiName");
+    }
+
+    [Test]
+    public async Task ApplyBindText_SkipsRedundantTextSet()
+    {
+        var vm = new FakeViewModel { Name = "Init" };
+        var view = new View { Text = "Init" };
+        var events = 0;
+        view.TextChanged += (s, e) => events++;
+        using var binding = view.ApplyBindText(vm, "Name", x => x.Name, (x, v) => x.Name = v);
+
+        vm.Name = "Init";
+        await Assert.That(events).IsEqualTo(0);
+    }
+
+    [Test]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    public async Task ApplyBindChecked_OneWay_SyncsCheckState(bool vmState, bool expectedUiState)
+    {
+        var vm = new FakeViewModel { IsEnabled = !vmState };
+        var cb = new CheckBox();
+        using var binding = cb.ApplyBindChecked(vm, "IsEnabled", x => x.IsEnabled);
+
+        vm.IsEnabled = vmState;
+        var checkState = expectedUiState ? CheckState.Checked : CheckState.UnChecked;
+        await Assert.That(cb.Value).IsEqualTo(checkState);
+    }
+
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task ApplyBindChecked_TwoWay_UiToVm(bool uiState)
+    {
+        var vm = new FakeViewModel { IsEnabled = !uiState };
+        var cb = new CheckBox { Value = uiState ? CheckState.UnChecked : CheckState.Checked };
+        using var binding = cb.ApplyBindChecked(
+            vm,
+            "IsEnabled",
+            x => x.IsEnabled,
+            (x, v) => x.IsEnabled = v
+        );
+
+        cb.Value = uiState ? CheckState.Checked : CheckState.UnChecked; // triggers ValueChanged
+        await Assert.That(vm.IsEnabled).IsEqualTo(uiState);
+    }
+
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task ApplyBindVisible_SyncsVisibility(bool visible)
+    {
+        var vm = new FakeViewModel { IsVisible = !visible };
+        var view = new View();
+        using var binding = view.ApplyBindVisible(vm, "IsVisible", x => x.IsVisible);
+
+        vm.IsVisible = visible;
+        await Assert.That(view.Visible).IsEqualTo(visible);
+    }
+
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task ApplyBindEnabled_SyncsEnabled(bool enabled)
+    {
+        var vm = new FakeViewModel { IsEnabled = !enabled };
+        var view = new View();
+        using var binding = view.ApplyBindEnabled(vm, "IsEnabled", x => x.IsEnabled);
+
+        vm.IsEnabled = enabled;
+        await Assert.That(view.Enabled).IsEqualTo(enabled);
+    }
+
+    // --- Phase D: Edge cases ---
+
+    [Test]
+    public async Task BindingContext_AddBinding_ThrowsWhenDisposed()
+    {
+        var ctx = new BindingContext();
+        ctx.Dispose();
+
+        var exception = await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+        {
+            ctx.AddBinding(new DisposableAction(() => { }));
+            return Task.CompletedTask;
+        });
+
+        await Assert.That(exception).IsNotNull();
+    }
+
+    [Test]
     [Arguments("x => x.Name", "Name")]
     [Arguments("vm => vm.Title", "Title")]
     [Arguments("m => m.User.Profile.FirstName", "FirstName")]
@@ -2853,7 +4110,7 @@ public partial class BindingTests
 
 ```
 
-// File: src\Stanza.TerminalGui.Tests\E2EStanzaTests.cs
+// File: src\Stanza.TerminalGui.Tests\GeneratedViewE2ETests.cs
 
 ```csharp
 using System.Threading.Tasks;
@@ -2888,7 +4145,7 @@ public partial class SimpleFormView : View
     }
 }
 
-public class E2EStanzaTests
+public class GeneratedViewE2ETests
 {
     [Test]
     public async Task View_Initializes_Successfully()
@@ -2929,7 +4186,7 @@ public class E2EStanzaTests
 
 ```
 
-// File: src\Stanza.TerminalGui.Tests\Phase1LifecycleTests.cs
+// File: src\Stanza.TerminalGui.Tests\ViewLifecycleTests.cs
 
 ```csharp
 using System.Collections;
@@ -2944,34 +4201,34 @@ using Terminal.Gui.Views;
 
 namespace Stanza.TerminalGui.Tests;
 
-public partial class Phase1ViewModel : ObservableObject
+public partial class LifecycleTestViewModel : ObservableObject
 {
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 }
 
-[StanzaView<Phase1ViewModel>]
-public partial class Phase1LifecycleView : View
+[StanzaView<LifecycleTestViewModel>]
+public partial class LifecycleTestView : View
 {
     public Label HeaderLabel { get; private set; } = new() { Text = "Header" };
 
-    [BindText(nameof(Phase1ViewModel.Name))]
+    [BindText(nameof(LifecycleTestViewModel.Name))]
     public TextField NameInput { get; private set; } = new();
 
-    public Phase1LifecycleView()
+    public LifecycleTestView()
     {
         NameInput.Y = Pos.Bottom(HeaderLabel);
         Add(HeaderLabel, NameInput);
     }
 }
 
-public class Phase1LifecycleTests
+public class ViewLifecycleTests
 {
     [Test]
     public async Task ViewModel_NullDetachment_UnsubscribesOldVm()
     {
-        var vmA = new Phase1ViewModel { Name = "Alpha" };
-        var view = new Phase1LifecycleView { ViewModel = vmA };
+        var vmA = new LifecycleTestViewModel { Name = "Alpha" };
+        var view = new LifecycleTestView { ViewModel = vmA };
 
         await Assert.That(view.NameInput.Text.ToString()).IsEqualTo("Alpha");
 
@@ -2984,9 +4241,9 @@ public class Phase1LifecycleTests
     [Test]
     public async Task ViewModel_SwapNullSwap_RecoversWithoutStaleSubscriptions()
     {
-        var vmA = new Phase1ViewModel { Name = "VM_A" };
-        var vmB = new Phase1ViewModel { Name = "VM_B" };
-        var view = new Phase1LifecycleView();
+        var vmA = new LifecycleTestViewModel { Name = "VM_A" };
+        var vmB = new LifecycleTestViewModel { Name = "VM_B" };
+        var view = new LifecycleTestView();
 
         view.ViewModel = vmA;
         await Assert.That(view.NameInput.Text.ToString()).IsEqualTo("VM_A");
@@ -3000,6 +4257,42 @@ public class Phase1LifecycleTests
 
         vmB.Name = "VM_B_Changed";
         await Assert.That(view.NameInput.Text.ToString()).IsEqualTo("VM_B_Changed");
+    }
+
+    [Test]
+    public async Task ViewModel_Swap_DetachesOldTwoWayUiHandler()
+    {
+        // This test ensures that when the ViewModel is swapped,
+        // the old two-way UI handlers are detached and don't affect the old VM.
+        var vmA = new LifecycleTestViewModel { Name = "VM_A" };
+        var vmB = new LifecycleTestViewModel { Name = "VM_B" };
+        var view = new LifecycleTestView { ViewModel = vmA };
+
+        // Act - Swap VM
+        view.ViewModel = vmB;
+
+        // Act - Change UI (should update vmB, but NOT vmA)
+        view.NameInput.Text = "UI_Changed";
+
+        // Assert
+        await Assert.That(vmB.Name).IsEqualTo("UI_Changed");
+        await Assert.That(vmA.Name).IsEqualTo("VM_A");
+    }
+
+    [Test]
+    public async Task ViewModel_SameInstance_IsNoOp()
+    {
+        var vmA = new LifecycleTestViewModel { Name = "Alpha" };
+        var view = new LifecycleTestView { ViewModel = vmA };
+
+        // Change UI text
+        view.NameInput.Text = "Beta";
+
+        // Re-assign same ViewModel instance
+        view.ViewModel = vmA;
+
+        // Ensure the value wasn't wiped back to 'Alpha' by a re-trigger of ApplyBindings
+        await Assert.That(view.NameInput.Text.ToString()).IsEqualTo("Beta");
     }
 }
 
